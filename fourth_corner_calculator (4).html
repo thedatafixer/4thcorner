@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis de Cuarta Esquina</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf8; --bg2: #f2f0ea; --bg3: #e8e5dc;
+    --text: #1a1a18; --text2: #5a5a55; --text3: #8a8a82;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --teal: #1D9E75; --teal-light: #E1F5EE; --teal-dark: #085041;
+    --coral: #D85A30; --coral-light: #FAECE7; --coral-dark: #4A1B0C;
+    --blue: #185FA5; --blue-light: #E6F1FB; --blue-mid: #378ADD;
+    --amber: #BA7517; --amber-light: #FAEEDA;
+    --red: #A32D2D; --red-light: #FCEBEB;
+    --green: #3B6D11; --green-light: #EAF3DE;
+    --purple: #534AB7; --purple-light: #EEEDFE;
+    --radius: 10px; --radius-sm: 6px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+  
+  .app-header { background: var(--text); color: white; padding: 16px 28px; display: flex; align-items: center; gap: 14px; }
+  .app-header h1 { font-size: 17px; font-weight: 500; letter-spacing: -0.3px; }
+  .app-header .subtitle { font-size: 12px; opacity: 0.55; margin-top: 1px; }
+  .corner-badge { width: 36px; height: 36px; background: var(--teal); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: white; flex-shrink: 0; }
+
+  .layout { display: flex; min-height: calc(100vh - 60px); }
+  .sidebar { width: 210px; background: var(--bg2); border-right: 0.5px solid var(--border); padding: 16px 0; flex-shrink: 0; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; color: var(--text2); transition: all 0.15s; border-left: 3px solid transparent; }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: white; color: var(--text); border-left-color: var(--teal); font-weight: 500; }
+  .nav-num { width: 20px; height: 20px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .nav-item.active .nav-num { background: var(--teal); color: white; }
+  .nav-item.done .nav-num { background: var(--green); color: white; }
+  .nav-item.done .nav-num::after { content: '✓'; }
+  .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); padding: 14px 18px 4px; font-weight: 600; }
+
+  .main { flex: 1; padding: 24px 28px; overflow-x: hidden; }
+  .page { display: none; } .page.active { display: block; }
+
+  h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .page-desc { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.6; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+  .card { background: white; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .card-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .hint { font-size: 12px; color: var(--text3); margin-bottom: 10px; line-height: 1.55; }
+
+  textarea { width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 9px 11px; font-family: 'Consolas', monospace; font-size: 11.5px; resize: vertical; background: var(--bg2); color: var(--text); line-height: 1.5; }
+  textarea:focus { outline: none; border-color: var(--teal); background: white; }
+  
+  select, input[type=number] { border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 7px 10px; font-size: 13px; background: var(--bg2); color: var(--text); width: 100%; }
+  select:focus, input:focus { outline: none; border-color: var(--teal); background: white; }
+
+  .btn { padding: 8px 18px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; background: white; color: var(--text); font-family: inherit; transition: all 0.15s; }
+  .btn:hover { background: var(--bg2); }
+  .btn-primary { background: var(--text); color: white; border-color: var(--text); }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-teal { background: var(--teal); color: white; border-color: var(--teal); }
+  .btn-teal:hover { background: var(--teal-dark); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+
+  .tag { display: inline-block; padding: 3px 9px; border-radius: 100px; font-size: 11px; font-weight: 500; }
+  .tag-ok { background: var(--green-light); color: var(--green); }
+  .tag-warn { background: var(--amber-light); color: var(--amber); }
+  .tag-err { background: var(--red-light); color: var(--red); }
+  .tag-info { background: var(--blue-light); color: var(--blue); }
+
+  .metric { background: var(--bg2); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .metric-value { font-size: 22px; font-weight: 600; line-height: 1.1; }
+  .metric-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .progress-wrap { margin: 12px 0; }
+  .progress-bar { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--teal); transition: width 0.12s; border-radius: 3px; }
+
+  /* Tabs inside pages */
+  .subtabs { display: flex; gap: 2px; border-bottom: 0.5px solid var(--border); margin-bottom: 20px; }
+  .subtab { padding: 8px 16px; font-size: 13px; border: none; background: none; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; transition: all 0.15s; }
+  .subtab.active { color: var(--text); border-bottom-color: var(--teal); font-weight: 500; }
+  .subtab:hover:not(.active) { color: var(--text); }
+  .subcontent { display: none; } .subcontent.active { display: block; }
+
+  /* Table */
+  .result-table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { background: var(--bg2); padding: 7px 12px; text-align: left; font-weight: 600; font-size: 11.5px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 7px 12px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg2); }
+  .sig1 { background: #dbeeff; } .sig2 { background: #b8d9f7; } .sig3 { background: #378ADD; color: white; }
+  .r-pos { color: var(--teal-dark); font-weight: 600; }
+  .r-neg { color: var(--coral-dark); font-weight: 600; }
+  .bar-pos { display: inline-block; height: 10px; background: var(--teal); border-radius: 2px; vertical-align: middle; }
+  .bar-neg { display: inline-block; height: 10px; background: var(--coral); border-radius: 2px; vertical-align: middle; }
+
+  /* Heatmap */
+  .heatmap-container { overflow-x: auto; }
+  .heatmap-svg { display: block; }
+
+  /* Ordination */
+  .ord-canvas-wrap { position: relative; background: white; border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .ord-canvas-wrap canvas { display: block; max-width: 100%; }
+
+  /* Legend */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--text2); margin-top: 10px; align-items: center; }
+  .legend-dot { width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-circle { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Model selector */
+  .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .model-card { border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; cursor: pointer; transition: all 0.15s; background: white; }
+  .model-card:hover { border-color: var(--teal); }
+  .model-card.selected { border-color: var(--teal); background: var(--teal-light); }
+  .model-card-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .model-card-desc { font-size: 11.5px; color: var(--text2); line-height: 1.5; }
+  .model-card-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 100px; margin-bottom: 5px; font-weight: 600; }
+  .badge-rec { background: var(--teal-light); color: var(--teal-dark); }
+  .badge-combined { background: var(--purple-light); color: var(--purple); }
+  .badge-classic { background: var(--bg3); color: var(--text2); }
+
+  .form-row { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; display: block; font-weight: 500; }
+  .form-row-inline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  .info-box { background: var(--blue-light); border-left: 3px solid var(--blue-mid); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 14px; font-size: 12.5px; color: var(--blue); margin-bottom: 16px; line-height: 1.6; }
+
+  .correction-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .corr-opt { border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 13px; cursor: pointer; transition: all 0.15s; }
+  .corr-opt:hover { border-color: var(--teal); }
+  .corr-opt.selected { border-color: var(--teal); background: var(--teal-light); }
+  .corr-opt-title { font-size: 12.5px; font-weight: 600; margin-bottom: 2px; }
+  .corr-opt-desc { font-size: 11px; color: var(--text2); }
+
+  .empty-state { text-align: center; padding: 50px 20px; color: var(--text3); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-text { font-size: 14px; }
+
+  @media (max-width: 750px) {
+    .sidebar { display: none; }
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .model-grid, .form-row-inline, .grid4 { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="corner-badge">4C</div>
+  <div>
+    <div class="app-header h1" style="color:white;font-size:17px;font-weight:500">Análisis de Cuarta Esquina</div>
+    <div class="subtitle">Fourth Corner Analysis · Legendre 1997, Dray & Legendre 2008, ter Braak et al. 2012</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="nav-section">Entrada</div>
+    <div class="nav-item active" onclick="goPage('datos')" id="nav-datos">
+      <div class="nav-num">1</div> Datos (R, L, Q)
+    </div>
+    <div class="nav-item" onclick="goPage('config')" id="nav-config">
+      <div class="nav-num">2</div> Configuración
+    </div>
+    <div class="nav-section">Resultados</div>
+    <div class="nav-item" onclick="goPage('tabla')" id="nav-tabla">
+      <div class="nav-num">3</div> Tabla de resultados
+    </div>
+    <div class="nav-item" onclick="goPage('heatmap')" id="nav-heatmap">
+      <div class="nav-num">4</div> Heatmap
+    </div>
+    <div class="nav-item" onclick="goPage('ordinacion')" id="nav-ordinacion">
+      <div class="nav-num">5</div> Ordenación
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- PAGE 1: DATOS -->
+    <div class="page active" id="page-datos">
+      <h2>Matrices de entrada</h2>
+      <p class="page-desc">Ingresá las tres matrices en formato CSV (separado por comas). La primera fila y primera columna son encabezados.</p>
+      <div class="grid3" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">
+            <span style="background:var(--teal-light);color:var(--teal-dark);padding:2px 8px;border-radius:4px;font-size:11px">R</span>
+            Matriz R — Ambiente
+          </div>
+          <div class="hint">Sitios × Variables ambientales</div>
+          <textarea id="matR" rows="8" placeholder="Sitio,Temp,pH,Humedad&#10;S1,25,6.5,40&#10;S2,22,6.8,50&#10;S3,18,7.2,65&#10;S4,14,7.6,75&#10;S5,10,7.9,85"></textarea>
+          <div style="margin-top:6px"><span id="statR" class="tag tag-warn">No cargada</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <span style="background:var(--blue-light);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:11px">L</span>
+            Matriz L — Comunidad
+          </div>
+          <div class="hint">Sitios × Especies (abundancia o presencia/ausencia)</div>
+          <textarea id="matL" rows="8" placeholder="Sitio,Sp1,Sp2,Sp3,Sp4&#10;S1,5,2,0,1&#10;S2,3,4,1,0&#10;S3,1,3,4,2&#10;S4,0,1,5,4&#10;S5,2,0,3,5"></textarea>
+          <div style="margin-top:6px"><span id="statL" class="tag tag-warn">No cargada</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:11px">Q</span>
+            Matriz Q — Rasgos
+          </div>
+          <div class="hint">Especies × Rasgos funcionales</div>
+          <textarea id="matQ" rows="8" placeholder="Especie,TallaMax,ToleranciaFrio,SLA&#10;Sp1,8,0.2,12&#10;Sp2,15,0.4,22&#10;Sp3,25,0.8,35&#10;Sp4,30,0.9,42"></textarea>
+          <div style="margin-top:6px"><span id="statQ" class="tag tag-warn">No cargada</span></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="cargarDatos()">Cargar datos →</button>
+        <button class="btn" onclick="cargarEjemplo()">Cargar ejemplo</button>
+        <button class="btn btn-sm" onclick="limpiar()">Limpiar</button>
+      </div>
+      <div id="preview-data" style="margin-top:18px"></div>
+    </div>
+
+    <!-- PAGE 2: CONFIG -->
+    <div class="page" id="page-config">
+      <h2>Configuración del análisis</h2>
+      <p class="page-desc">Elegí el modelo de permutación, estadístico y parámetros de prueba.</p>
+
+      <div class="card" style="margin-bottom:16px">
+        <h3>Modelo de permutación</h3>
+        <div class="hint" style="margin-bottom:6px">Cada modelo representa una hipótesis ecológica distinta sobre cómo se organiza la comunidad. Seleccioná el que corresponda a tu pregunta de investigación. <strong>Modelo 6 es el recomendado</strong> para la mayoría de los estudios (ter Braak et al. 2012; Dray et al. 2014).</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px">
+          Fuentes: Legendre et al. (1997) · Dray &amp; Legendre (2008) · ter Braak et al. (2012) · Dray et al. (2014)
+        </div>
+        <div class="model-grid" id="model-grid">
+
+          <!-- M1 -->
+          <div class="model-card" data-model="1" onclick="selectModel(this)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="background:#E6F1FB;color:#185FA5;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">Modelo 1</span>
+              <span style="font-size:10.5px;color:var(--text3)">Gleason (1926); Nicolson et al. (2002)</span>
+            </div>
+            <div class="model-card-title">Control ambiental sobre individuos</div>
+            <div class="model-card-desc">
+              <strong>H₀ estadística:</strong> no existe asociación entre variables ambientales y abundancia de especies individuales.<br>
+              <strong>Permuta:</strong> abundancias de cada especie por separado entre localidades — las especies se barajan de forma independiente entre sí (filas de L especie por especie).<br>
+              <strong>Interpretación ecológica:</strong> cada especie responde individualmente al gradiente ambiental según su tolerancia fisiológica particular (visión individualista de Gleason).<br>
+              <span style="color:var(--text3);font-size:10.5px;margin-top:4px;display:block">Ejemplo: plantas helófitas distribuidas según tolerancia a la anoxia del suelo (Casanova &amp; Brock, 2000).</span>
+              <span style="color:var(--blue);font-size:10px;margin-top:3px;display:block;font-family:monospace">R fijo · L permut. (cada fila independiente) · Q fijo</span>
+            </div>
+          </div>
+
+          <!-- M2 -->
+          <div class="model-card" data-model="2" onclick="selectModel(this)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="background:#E1F5EE;color:#085041;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">Modelo 2</span>
+              <span style="font-size:10.5px;color:var(--text3)">Clements (1916); Poorter et al. (2023)</span>
+            </div>
+            <div class="model-card-title">Control ambiental sobre ensamblajes</div>
+            <div class="model-card-desc">
+              <strong>H₀ estadística:</strong> la composición de los ensamblajes no depende del ambiente.<br>
+              <strong>Permuta:</strong> vectores de sitios completos (filas enteras de L) — las especies varían juntas o no varían. Se conserva la composición interna de cada comunidad.<br>
+              <strong>Interpretación ecológica:</strong> el ambiente estructura comunidades como unidades funcionales; no selecciona especies aisladas sino grupos con requerimientos similares (visión organísmica de Clements).<br>
+              <span style="color:var(--text3);font-size:10.5px;margin-top:4px;display:block">Ejemplo: islas flotantes en lagunas donde un conjunto de especies coloniza junto un espacio (Gordon Colón et al., 2017).</span>
+              <span style="color:var(--teal-dark);font-size:10px;margin-top:3px;display:block;font-family:monospace">R fijo · L permut. (filas completas) · Q fijo</span>
+            </div>
+          </div>
+
+          <!-- M3 -->
+          <div class="model-card" data-model="3" onclick="selectModel(this)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="background:#FAEEDA;color:#854F0B;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">Modelo 3</span>
+              <span style="font-size:10.5px;color:var(--text3)">Hubbell (2001); Gleason (1926)</span>
+            </div>
+            <div class="model-card-title">Lotería por espacios</div>
+            <div class="model-card-desc">
+              <strong>H₀ estadística:</strong> la distribución local de especies es aleatoria respecto al ambiente.<br>
+              <strong>Permuta:</strong> abundancias de las especies dentro de cada sitio de forma independiente (columnas de L). Altera qué especie domina en cada sitio, sin cambiar la distribución general del sistema.<br>
+              <strong>Interpretación ecológica:</strong> la presencia relativa de especies depende del azar de colonización más que del filtro ambiental (hipótesis neutral / lotería).<br>
+              <span style="color:var(--text3);font-size:10.5px;margin-top:4px;display:block">Ejemplo: asentamiento de plántulas en claros de bosque tras caída de árbol; colonización de larvas en sustratos nuevos.</span>
+              <span style="color:var(--amber);font-size:10px;margin-top:3px;display:block;font-family:monospace">R fijo · L permut. (columnas por sitio) · Q fijo</span>
+            </div>
+          </div>
+
+          <!-- M4 -->
+          <div class="model-card" data-model="4" onclick="selectModel(this)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="background:#EEEDFE;color:#534AB7;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">Modelo 4</span>
+              <span style="font-size:10.5px;color:var(--text3)">Control histórico–evolutivo</span>
+            </div>
+            <div class="model-card-title">Restricción por adaptaciones</div>
+            <div class="model-card-desc">
+              <strong>H₀ estadística:</strong> los rasgos funcionales no están asociados con la distribución espacial de las especies.<br>
+              <strong>Permuta:</strong> vectores de especies completos — columnas de L (identidad especie–sitio), rompiendo la relación especie–rasgo. La estructura ambiental y comunitaria se conserva.<br>
+              <strong>Interpretación ecológica:</strong> la distribución depende de la historia evolutiva (rasgos anatómicos heredados) más que del ambiente inmediato.<br>
+              <span style="color:var(--text3);font-size:10.5px;margin-top:4px;display:block">Ejemplo: colonización de morrenas glaciares tras retroceso del hielo; restricción por rasgos evolutivos (Kaufmann &amp; Raffl, 2002).</span>
+              <span style="color:var(--purple);font-size:10px;margin-top:3px;display:block;font-family:monospace">R fijo · L permut. (columnas completas) · Q fijo</span>
+            </div>
+          </div>
+
+          <!-- M5 -->
+          <div class="model-card" data-model="5" onclick="selectModel(this)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="background:#FCEBEB;color:#A32D2D;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">Modelo 5</span>
+              <span style="font-size:10.5px;color:var(--text3)">Combinación restringida M2 + M4</span>
+            </div>
+            <div class="model-card-title">Mezcla de control y adaptaciones</div>
+            <div class="model-card-desc">
+              <strong>H₀ estadística:</strong> no existe relación rasgo–ambiente una vez consideradas la estructura comunitaria y funcional.<br>
+              <strong>Permuta:</strong> combina M2 (filas de L) y M4 (columnas de L) simultáneamente — controla tanto la estructura de los ensamblajes como la relación especie–rasgo.<br>
+              <strong>Interpretación ecológica:</strong> coexistencia de control ambiental y restricciones adaptativas; algunas asociaciones responden al sitio, otras a los rasgos heredados.<br>
+              <span style="color:var(--text3);font-size:10.5px;margin-top:4px;display:block">Ejemplo: herbazal donde la dominancia de <em>Sporobolus virginicus</em> depende de plasticidad fenotípica y del pH/salinidad del suelo (Avendaño et al., 2018).</span>
+              <span style="color:var(--red);font-size:10px;margin-top:3px;display:block;font-family:monospace">R fijo · L permut. (filas + columnas) · Q fijo</span>
+            </div>
+          </div>
+
+          <!-- M6 -->
+          <div class="model-card selected" data-model="6" onclick="selectModel(this)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="background:#534AB7;color:white;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">Modelo 6 ★</span>
+              <span style="font-size:10.5px;color:var(--text3)">ter Braak et al. (2012) · Recomendado</span>
+            </div>
+            <div class="model-card-title">Interacción total predictiva</div>
+            <div class="model-card-desc">
+              <strong>H₀ estadística:</strong> no existe asociación entre rasgos y ambiente mediada por abundancias, controlando la estructura de ambas matrices.<br>
+              <strong>Permuta:</strong> permutación secuencial doble — corre M2 (control R–L) y M4 (control L–Q) por separado; es significativo solo si <em>ambos</em> p ≤ α. Reporta max(p_M2, p_M4).<br>
+              <strong>Interpretación ecológica:</strong> la presencia y abundancia son función obligatoria de la interacción directa rasgo–ambiente; el modelo más restrictivo, controla el error tipo I en todos los escenarios posibles.<br>
+              <span style="color:var(--text3);font-size:10.5px;margin-top:4px;display:block">Ejemplo: aves cuya probabilidad de presencia en zonas urbanas depende estrictamente de sus rasgos (anidación en edificios, hábito alimenticio; Brown et al., 2014).</span>
+              <span style="color:var(--purple);font-size:10px;margin-top:3px;display:block;font-family:monospace">Arm A: R fijo · L permut. (filas) · Q fijo &nbsp;|&nbsp; Arm B: R fijo · L permut. (cols) · Q fijo</span>
+            </div>
+          </div>
+
+        </div>
+        <div style="margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);line-height:1.6">
+          <strong>Referencia bibliográfica clave:</strong> Dray &amp; Legendre (2008) demostraron mediante simulaciones que solo M6 (combinación secuencial de M2 y M4) controla el error tipo I en <em>todos</em> los escenarios posibles de relación entre R, L y Q. ter Braak et al. (2012) confirmaron y refinaron este resultado. Dray et al. (2014) lo integraron en el marco RLQ.
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom:16px">
+        <div class="card">
+          <h3>Parámetros estadísticos</h3>
+          <div class="form-row-inline" style="margin-top:10px">
+            <div class="form-row">
+              <label class="form-label">Permutaciones</label>
+              <select id="nPerm">
+                <option value="99">99 (prueba rápida)</option>
+                <option value="499">499</option>
+                <option value="999" selected>999 (estándar)</option>
+                <option value="4999">4999 (preciso)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Estadístico</label>
+              <select id="estadistico">
+                <option value="r" selected>Pearson (r)</option>
+                <option value="rho">Spearman (ρ)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Nivel α</label>
+              <select id="alpha">
+                <option value="0.05" selected>0.05</option>
+                <option value="0.01">0.01</option>
+                <option value="0.001">0.001</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Corrección de p-valores múltiples</h3>
+          <div class="hint">Con muchos rasgos × variables, ajustar por comparaciones múltiples es importante.</div>
+          <div class="correction-grid">
+            <div class="corr-opt selected" data-corr="none" onclick="selectCorr(this)">
+              <div class="corr-opt-title">Sin corrección</div>
+              <div class="corr-opt-desc">p-valores crudos de permutaciones</div>
+            </div>
+            <div class="corr-opt" data-corr="holm" onclick="selectCorr(this)">
+              <div class="corr-opt-title">Holm</div>
+              <div class="corr-opt-desc">Recomendada. Controla FWER con más potencia que Bonferroni</div>
+            </div>
+            <div class="corr-opt" data-corr="bonferroni" onclick="selectCorr(this)">
+              <div class="corr-opt-title">Bonferroni</div>
+              <div class="corr-opt-desc">Conservadora. p × nTests</div>
+            </div>
+            <div class="corr-opt" data-corr="fdr" onclick="selectCorr(this)">
+              <div class="corr-opt-title">FDR (Benjamini-Hochberg)</div>
+              <div class="corr-opt-desc">Control de tasa de falsos descubrimientos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-teal" onclick="correrAnalisis()" id="btn-run">▶ Calcular análisis</button>
+        <span id="run-msg" style="font-size:12px;color:var(--text2)"></span>
+      </div>
+      <div id="run-progress" style="display:none;margin-top:12px">
+        <div class="progress-wrap">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px">
+            <span id="perm-label">Calculando permutaciones...</span>
+            <span id="perm-count">0 / 999</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="pbar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: TABLA -->
+    <div class="page" id="page-tabla">
+      <h2>Tabla de resultados</h2>
+      <div id="tabla-content">
+        <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Todavía no se corrió el análisis.<br>Ir a <strong>Configuración</strong> y hacer clic en "Calcular análisis".</div></div>
+      </div>
+    </div>
+
+    <!-- PAGE 4: HEATMAP -->
+    <div class="page" id="page-heatmap">
+      <h2>Heatmap de correlaciones</h2>
+      <div id="heatmap-content">
+        <div class="empty-state"><div class="empty-icon">🟦</div><div class="empty-text">Calculá el análisis primero.</div></div>
+      </div>
+    </div>
+
+    <!-- PAGE 5: ORDENACION -->
+    <div class="page" id="page-ordinacion">
+      <h2>Gráficos de ordenación</h2>
+      <div id="ord-content">
+        <div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-text">Calculá el análisis primero.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── STATE ─────────────────────────────────────────────────────────────────
+const STATE = {
+  mats: null,
+  model: 2,
+  corr: 'none',
+  results: null,
+  charts: []
+};
+
+// ─── NAVIGATION ────────────────────────────────────────────────────────────
+function goPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.getElementById('nav-' + p).classList.add('active');
+}
+
+// ─── DATA LOADING ──────────────────────────────────────────────────────────
+function parseCSV(txt) {
+  return txt.trim().split('\n').map(l => l.split(',').map(s => s.trim()));
+}
+
+function cargarEjemplo() {
+  document.getElementById('matR').value = `Sitio,Temperatura,pH,Humedad
+S1,25,6.5,40
+S2,22,6.8,50
+S3,18,7.2,65
+S4,14,7.6,75
+S5,10,7.9,85`;
+  document.getElementById('matL').value = `Sitio,Sp1,Sp2,Sp3,Sp4
+S1,5,2,0,1
+S2,3,4,1,0
+S3,1,3,4,2
+S4,0,1,5,4
+S5,2,0,3,5`;
+  document.getElementById('matQ').value = `Especie,TallaMax,ToleranciaFrio,SLA
+Sp1,8,0.2,12
+Sp2,15,0.4,22
+Sp3,25,0.8,35
+Sp4,30,0.9,42`;
+}
+
+function limpiar() {
+  ['matR','matL','matQ'].forEach(id => document.getElementById(id).value = '');
+  ['statR','statL','statQ'].forEach(id => { document.getElementById(id).className = 'tag tag-warn'; document.getElementById(id).textContent = 'No cargada'; });
+  document.getElementById('preview-data').innerHTML = '';
+  STATE.mats = null; STATE.results = null;
+}
+
+function cargarDatos() {
+  try {
+    const rRaw = parseCSV(document.getElementById('matR').value);
+    const lRaw = parseCSV(document.getElementById('matL').value);
+    const qRaw = parseCSV(document.getElementById('matQ').value);
+
+    const siteNamesR = rRaw.slice(1).map(r => r[0]);
+    const siteNamesL = lRaw.slice(1).map(r => r[0]);
+    const speciesNamesL = lRaw[0].slice(1);
+    const speciesNamesQ = qRaw.slice(1).map(r => r[0]);
+    const envNames = rRaw[0].slice(1);
+    const traitNames = qRaw[0].slice(1);
+
+    const nSites = siteNamesR.length;
+    const nSp = speciesNamesL.length;
+
+    if (siteNamesL.length !== nSites) throw new Error(`L tiene ${siteNamesL.length} sitios pero R tiene ${nSites}`);
+    if (speciesNamesQ.length !== nSp) throw new Error(`Q tiene ${speciesNamesQ.length} especies pero L tiene ${nSp}`);
+
+    const R = rRaw.slice(1).map(r => r.slice(1).map(Number));
+    const L = lRaw.slice(1).map(r => r.slice(1).map(Number));
+    const Q = qRaw.slice(1).map(r => r.slice(1).map(Number));
+
+    STATE.mats = { R, L, Q, siteNames: siteNamesR, speciesNames: speciesNamesL, envNames, traitNames };
+
+    const setOk = (id, txt) => { const el = document.getElementById(id); el.className = 'tag tag-ok'; el.textContent = txt; };
+    setOk('statR', `${nSites} sitios × ${envNames.length} variables`);
+    setOk('statL', `${nSites} sitios × ${nSp} especies`);
+    setOk('statQ', `${nSp} especies × ${traitNames.length} rasgos`);
+
+    document.getElementById('preview-data').innerHTML = `
+      <div class="grid4" style="margin-top:4px">
+        <div class="metric"><div class="metric-label">Sitios</div><div class="metric-value">${nSites}</div></div>
+        <div class="metric"><div class="metric-label">Especies</div><div class="metric-value">${nSp}</div></div>
+        <div class="metric"><div class="metric-label">Variables amb.</div><div class="metric-value">${envNames.length}</div></div>
+        <div class="metric"><div class="metric-label">Rasgos</div><div class="metric-value">${traitNames.length}</div></div>
+      </div>`;
+
+    document.getElementById('nav-datos').classList.add('done');
+  } catch(e) {
+    ['statR','statL','statQ'].forEach(id => { const el = document.getElementById(id); el.className = 'tag tag-err'; el.textContent = 'Error'; });
+    alert('Error al cargar datos: ' + e.message);
+  }
+}
+
+// ─── MODEL / CORRECTION SELECTION ─────────────────────────────────────────
+function selectModel(el) {
+  document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  STATE.model = parseInt(el.dataset.model);
+}
+
+function selectCorr(el) {
+  document.querySelectorAll('.corr-opt').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  STATE.corr = el.dataset.corr;
+}
+
+// ─── STATS HELPERS ─────────────────────────────────────────────────────────
+function rankArr(arr) {
+  const idx = arr.map((v,i) => ({v,i})).sort((a,b) => a.v-b.v);
+  const r = new Array(arr.length);
+  idx.forEach((x,k) => r[x.i] = k+1);
+  return r;
+}
+function pearson(x, y) {
+  const n = x.length, mx = x.reduce((a,b)=>a+b,0)/n, my = y.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx2=0, dy2=0;
+  for(let i=0;i<n;i++){const dx=x[i]-mx,dy=y[i]-my;num+=dx*dy;dx2+=dx*dx;dy2+=dy*dy;}
+  const d = Math.sqrt(dx2*dy2);
+  return d < 1e-12 ? 0 : num/d;
+}
+function spearman(x, y) { return pearson(rankArr(x), rankArr(y)); }
+
+function computeFC(L, R, Q, useSpearman) {
+  const nS=L.length, nSp=L[0].length, nE=R[0].length, nT=Q[0].length, fn=useSpearman?spearman:pearson;
+  return Array.from({length:nT},(_,t)=>Array.from({length:nE},(_,e)=>{
+    let ev=[],tv=[];
+    for(let i=0;i<nS;i++) for(let j=0;j<nSp;j++) if(L[i][j]>0){ev.push(R[i][e]);tv.push(Q[j][t]);}
+    return ev.length>2?fn(ev,tv):0;
+  }));
+}
+
+function shuffleRows(m) {
+  const c=m.map(r=>[...r]);
+  for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}
+  return c;
+}
+function shuffleCols(m) {
+  const nR=m.length, nC=m[0].length, idx=[...Array(nC).keys()];
+  for(let i=nC-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+  return m.map(row=>idx.map(c=>row[c]));
+}
+
+function applyCorrection(pvals, method) {
+  const flat = pvals.flat();
+  const n = flat.length;
+  if (method === 'none') return pvals.map(r => r.map(v => Math.min(v, 1)));
+  if (method === 'bonferroni') return pvals.map(r => r.map(v => Math.min(v * n, 1)));
+  if (method === 'holm') {
+    const sorted = flat.map((p,i)=>({p,i})).sort((a,b)=>a.p-b.p);
+    const adj = new Array(n);
+    let maxAdj = 0;
+    sorted.forEach(({p,i},k) => {
+      const a = Math.min(p*(n-k), 1);
+      maxAdj = Math.max(maxAdj, a);
+      adj[i] = maxAdj;
+    });
+    let out=0;
+    return pvals.map(r=>r.map(()=>adj[out++]));
+  }
+  if (method === 'fdr') {
+    const sorted = flat.map((p,i)=>({p,i})).sort((a,b)=>a.p-b.p);
+    const adj = new Array(n);
+    for(let k=n-1;k>=0;k--){
+      adj[sorted[k].i] = k===n-1 ? sorted[k].p : Math.min(sorted[k].p*n/(k+1), adj[sorted[k+1].i]);
+    }
+    let out=0;
+    return pvals.map(r=>r.map(()=>Math.min(adj[out++],1)));
+  }
+  return pvals;
+}
+
+// ─── MAIN ANALYSIS ─────────────────────────────────────────────────────────
+function correrAnalisis() {
+  if (!STATE.mats) { alert('Primero cargá los datos (paso 1).'); return; }
+  const { R, L, Q } = STATE.mats;
+  const nPerm = parseInt(document.getElementById('nPerm').value);
+  const useSpearman = document.getElementById('estadistico').value === 'rho';
+  const alpha = parseFloat(document.getElementById('alpha').value);
+  const model = STATE.model;
+  const corrMethod = STATE.corr;
+
+  document.getElementById('run-progress').style.display = 'block';
+  document.getElementById('run-msg').textContent = '';
+  document.getElementById('btn-run').disabled = true;
+
+  // ── Observed statistic (always the same, computed on original data) ─────
+  const obsFC = computeFC(L, R, Q, useSpearman);
+  const nT = STATE.mats.traitNames.length, nE = STATE.mats.envNames.length;
+
+  // For M5 (sequential) we need two independent permutation distributions
+  // cnt_a: from the "R–L" permutation arm  (M2-style: permute rows of L)
+  // cnt_b: from the "L–Q" permutation arm  (M4-style: permute cols of L + rows of Q)
+  const cnt_a = Array.from({length:nT},()=>new Array(nE).fill(0));
+  const cnt_b = Array.from({length:nT},()=>new Array(nE).fill(0));
+
+  /*
+   * PERMUTATION SCHEMES — aligned with Dray & Legendre (2008) and figure:
+   *
+   * M1 — Control ambiental sobre individuos (Gleason 1926)
+   *       Permuta cada especie de forma independiente entre sitios
+   *       → permuta filas de L (una fila por vez, independientemente)
+   *       Rompe R–L e L–Q; mantiene Q.
+   *
+   * M2 — Control ambiental sobre ensamblajes (Clements 1916)
+   *       Permuta el vector completo de un sitio (fila entera de L)
+   *       → shuffleRows(L)  [=permuta la etiqueta del sitio]
+   *       Rompe R–L; conserva composición interna del ensamblaje.
+   *
+   * M3 — Lotería por espacios (Hubbell 2001)
+   *       Permuta columnas de L (= identidad de las especies dentro de cada sitio)
+   *       → shuffleCols(L)
+   *       Rompe L–Q; conserva totales por sitio.
+   *
+   * M4 — Restricción por adaptaciones (evolutivo/filogenético)
+   *       Permuta filas de Q (rasgos entre especies); L y R fijos.
+   *       → shuffleRows(Q)
+   *       Rompe L–Q; conserva R–L.
+   *
+   * M5 — Mezcla de control y adaptaciones (M2 + M4 simultáneos)
+   *       Permuta filas de L Y filas de Q en el mismo paso.
+   *       → shuffleRows(L) + shuffleRows(Q)
+   *       Rompe R–L y L–Q simultáneamente.
+   *
+   * M6 — Interacción total predictiva (ter Braak et al. 2012) ★ Recomendado
+   *       Test secuencial doble: corre M2 y M4 por separado; significativo
+   *       solo si AMBOS p ≤ α. Reporta max(p_M2, p_M4).
+   *       Controla el error tipo I en todos los escenarios posibles.
+   */
+
+  let done = 0;
+  function batch() {
+    const bs = Math.min(50, nPerm - done);
+    for(let p=0;p<bs;p++){
+      let pFC_a, pFC_b;
+
+      if (model===1) {
+        // M1: permuta cada especie de forma independiente (columna a columna de L)
+        const Lp = L.map(row => [...row]);
+        for(let j=0;j<L[0].length;j++){
+          const col = L.map(r=>r[j]);
+          for(let i=col.length-1;i>0;i--){const k=Math.floor(Math.random()*(i+1));[col[i],col[k]]=[col[k],col[i]];}
+          for(let i=0;i<L.length;i++) Lp[i][j]=col[i];
+        }
+        pFC_a = computeFC(Lp, R, Q, useSpearman);
+      }
+      else if (model===2) {
+        // M2: permuta filas enteras de L (ensamblajes completos entre sitios)
+        pFC_a = computeFC(shuffleRows(L), R, Q, useSpearman);
+      }
+      else if (model===3) {
+        // M3: permuta columnas de L dentro de cada sitio (abundancias entre especies por sitio)
+        // = shuffleCols permuta la identidad de las especies en cada sitio
+        pFC_a = computeFC(shuffleCols(L), R, Q, useSpearman);
+      }
+      else if (model===4) {
+        // M4: permuta columnas enteras de L (vectores de especie entre sitios)
+        // Rompe la relación especie–rasgo; conserva R–L y totales por especie
+        pFC_a = computeFC(shuffleCols(L), R, Q, useSpearman);
+      }
+      else if (model===5) {
+        // M5: combina M2 (permuta filas de L) + M4 (permuta columnas de L) simultáneamente
+        pFC_a = computeFC(shuffleCols(shuffleRows(L)), R, Q, useSpearman);
+      }
+      else if (model===6) {
+        // M6 arm A: permuta filas de L (como M2 — rompe R–L)
+        pFC_a = computeFC(shuffleRows(L), R, Q, useSpearman);
+        // M6 arm B: permuta columnas de L (como M4 — rompe L–Q)
+        pFC_b = computeFC(shuffleCols(L), R, Q, useSpearman);
+      }
+
+      for(let t=0;t<nT;t++) for(let e=0;e<nE;e++){
+        if(Math.abs(pFC_a[t][e])>=Math.abs(obsFC[t][e])) cnt_a[t][e]++;
+        if(model===6 && Math.abs(pFC_b[t][e])>=Math.abs(obsFC[t][e])) cnt_b[t][e]++;
+      }
+      done++;
+    }
+
+    const pct = done/nPerm*100;
+    document.getElementById('pbar').style.width = pct+'%';
+    document.getElementById('perm-count').textContent = `${done} / ${nPerm}`;
+    if (done < nPerm) { setTimeout(batch, 0); return; }
+
+    // ── Compute final p-values ─────────────────────────────────────────────
+    const pA = obsFC.map((row,t)=>row.map((v,e)=>(cnt_a[t][e]+1)/(nPerm+1)));
+    let finalP;
+
+    if (model===6) {
+      // M6: max(p_M2, p_M4) — significativo solo si ambos ≤ α
+      const pB = obsFC.map((row,t)=>row.map((v,e)=>(cnt_b[t][e]+1)/(nPerm+1)));
+      finalP = pA.map((row,t)=>row.map((v,e)=>Math.max(pA[t][e], pB[t][e])));
+    } else {
+      finalP = pA;
+    }
+
+    const modelNames = {
+      1:'M1 — Control ambiental individual (Gleason 1926)',
+      2:'M2 — Control ambiental sobre ensamblajes (Clements 1916)',
+      3:'M3 — Lotería por espacios (Hubbell 2001)',
+      4:'M4 — Restricción por adaptaciones (evolutivo)',
+      5:'M5 — Mezcla de control y adaptaciones (M2+M4)',
+      6:'M6 — Interacción total predictiva · ter Braak et al. (2012) ★'
+    };
+
+    const adjP = applyCorrection(finalP, corrMethod);
+    STATE.results = { obs: obsFC, pvals: adjP, alpha, nPerm, model, modelName: modelNames[model] };
+
+    document.getElementById('run-progress').style.display = 'none';
+    document.getElementById('btn-run').disabled = false;
+    document.getElementById('run-msg').textContent = '✓ Análisis completado';
+    ['tabla','heatmap','ordinacion'].forEach(p => document.getElementById('nav-'+p).classList.add('done'));
+
+    renderTabla(); renderHeatmap(); renderOrdinacion();
+    goPage('tabla');
+  }
+  setTimeout(batch, 20);
+}
+
+// ─── RENDER: TABLA ─────────────────────────────────────────────────────────
+function renderTabla() {
+  const { obs, pvals, alpha } = STATE.results;
+  const { traitNames, envNames } = STATE.mats;
+  const nT = traitNames.length, nE = envNames.length;
+  const maxR = Math.max(...obs.flat().map(Math.abs), 0.001);
+
+  let sigCount = 0;
+  pvals.forEach(row => row.forEach(p => { if(p<=alpha) sigCount++; }));
+
+  let html = `<div style="background:var(--bg2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--text2);line-height:1.6">
+    <strong style="color:var(--text)">${STATE.results.modelName}</strong><br>
+    Legendre et al. (1997) · Dray &amp; Legendre (2008) · ter Braak et al. (2012) · Dray et al. (2014)
+  </div>
+  <div class="grid4" style="margin-bottom:16px">
+    <div class="metric"><div class="metric-label">Combinaciones</div><div class="metric-value">${nT*nE}</div></div>
+    <div class="metric"><div class="metric-label">Significativas (p≤${alpha})</div><div class="metric-value" style="color:var(--teal)">${sigCount}</div></div>
+    <div class="metric"><div class="metric-label">Permutaciones</div><div class="metric-value">${STATE.results.nPerm}</div></div>
+    <div class="metric"><div class="metric-label">Corrección p</div><div class="metric-value" style="font-size:16px">${STATE.corr==='none'?'Ninguna':STATE.corr.toUpperCase()}</div></div>
+  </div>`;
+
+  html += `<div class="card"><div class="result-table-wrap"><table>
+    <thead><tr>
+      <th>Rasgo</th><th>Variable ambiental</th>
+      <th style="text-align:center">r observado</th>
+      <th style="text-align:center">p-valor</th>
+      <th style="text-align:center">Sig.</th>
+      <th style="min-width:130px">Magnitud y dirección</th>
+    </tr></thead><tbody>`;
+
+  for(let t=0;t<nT;t++) for(let e=0;e<nE;e++){
+    const r=obs[t][e], p=pvals[t][e];
+    let sigCls='', sigLabel='ns';
+    if(p<=0.001){sigCls='sig3';sigLabel='***';}
+    else if(p<=0.01){sigCls='sig2';sigLabel='**';}
+    else if(p<=0.05){sigCls='sig1';sigLabel='*';}
+    const rCls = r>0?'r-pos':'r-neg';
+    const bW = Math.round(Math.abs(r)/maxR*90);
+    const barCls = r>0?'bar-pos':'bar-neg';
+    html+=`<tr class="${sigCls}">
+      <td>${traitNames[t]}</td><td>${envNames[e]}</td>
+      <td style="text-align:center" class="${rCls}">${r.toFixed(4)}</td>
+      <td style="text-align:center">${p.toFixed(4)}</td>
+      <td style="text-align:center;font-weight:700;letter-spacing:1px">${sigLabel}</td>
+      <td><span class="${barCls}" style="width:${bW}px"></span></td>
+    </tr>`;
+  }
+
+  html += `</tbody></table></div>
+  <div class="legend" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border)">
+    <div class="legend-item"><div class="legend-dot" style="background:#dbeeff"></div> p ≤ 0.05 *</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#b8d9f7"></div> p ≤ 0.01 **</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#378ADD"></div> p ≤ 0.001 ***</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> positivo</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--coral)"></div> negativo</div>
+  </div></div>`;
+
+  html += `<div class="btn-row" style="margin-top:14px">
+    <button class="btn btn-sm" onclick="exportCSV()">↓ Exportar CSV</button>
+  </div>`;
+
+  document.getElementById('tabla-content').innerHTML = html;
+}
+
+// ─── RENDER: HEATMAP ───────────────────────────────────────────────────────
+function renderHeatmap() {
+  const { obs, pvals, alpha } = STATE.results;
+  const { traitNames, envNames } = STATE.mats;
+  const nT = traitNames.length, nE = envNames.length;
+  const maxR = Math.max(...obs.flat().map(Math.abs), 0.001);
+
+  const cellW = Math.max(60, Math.min(110, Math.floor(520/nE)));
+  const cellH = 44;
+  const labelW = Math.max(100, Math.min(180, traitNames.reduce((m,n)=>Math.max(m,n.length*7),0)+16));
+  const labelH = Math.max(50, Math.min(100, envNames.reduce((m,n)=>Math.max(m,n.length*7),0)+16));
+  const svgW = labelW + nE*cellW + 40;
+  const svgH = labelH + nT*cellH + 70;
+
+  function rToColor(r, p) {
+    if (Math.abs(r)<0.001) return '#f2f0ea';
+    const t = Math.abs(r)/maxR;
+    if (r>0) {
+      const g = Math.round(158+t*(29-158)), b = Math.round(238+t*(65-238)), red=Math.round(225+t*(13-225));
+      return `rgb(${red},${g},${b})`;
+    } else {
+      const red=Math.round(240+t*(216-240)), g=Math.round(220+t*(90-220)), b=Math.round(215+t*(48-215));
+      return `rgb(${red},${g},${b})`;
+    }
+  }
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" class="heatmap-svg">
+    <style>text{font-family:'Segoe UI',sans-serif;}</style>
+    <rect width="${svgW}" height="${svgH}" fill="#fafaf8"/>`;
+
+  // Column labels (env)
+  for(let e=0;e<nE;e++){
+    const x = labelW + e*cellW + cellW/2;
+    const words = envNames[e].split(/(?=[A-Z])|_/).join('\n').split('');
+    svg += `<text x="${x}" y="${labelH-8}" text-anchor="middle" transform="rotate(-35,${x},${labelH-8})" font-size="11" fill="#5a5a55">${envNames[e]}</text>`;
+  }
+  // Column header
+  svg += `<text x="${labelW + nE*cellW/2}" y="14" text-anchor="middle" font-size="11" fill="#8a8a82" font-weight="600">VARIABLES AMBIENTALES</text>`;
+  svg += `<text x="${labelW/2}" y="${labelH + nT*cellH/2}" text-anchor="middle" transform="rotate(-90,${labelW/2},${labelH + nT*cellH/2})" font-size="11" fill="#8a8a82" font-weight="600">RASGOS FUNCIONALES</text>`;
+
+  for(let t=0;t<nT;t++){
+    const y = labelH + t*cellH;
+    // Trait label
+    svg += `<text x="${labelW-8}" y="${y+cellH/2+4}" text-anchor="end" font-size="11.5" fill="#1a1a18">${traitNames[t]}</text>`;
+    for(let e=0;e<nE;e++){
+      const x = labelW + e*cellW;
+      const r=obs[t][e], p=pvals[t][e];
+      const fill = rToColor(r,p);
+      const border = p<=alpha ? '#333' : '#ccc';
+      const bW = p<=alpha ? 1.5 : 0.5;
+      svg += `<rect x="${x+1}" y="${y+1}" width="${cellW-2}" height="${cellH-2}" rx="4" fill="${fill}" stroke="${border}" stroke-width="${bW}"/>`;
+      svg += `<text x="${x+cellW/2}" y="${y+cellH/2-3}" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a18">${r.toFixed(2)}</text>`;
+      const stars = p<=0.001?'***':p<=0.01?'**':p<=0.05?'*':'';
+      if(stars) svg += `<text x="${x+cellW/2}" y="${y+cellH/2+10}" text-anchor="middle" font-size="10" fill="#333" font-weight="700">${stars}</text>`;
+      else svg += `<text x="${x+cellW/2}" y="${y+cellH/2+10}" text-anchor="middle" font-size="9" fill="#8a8a82">p=${p.toFixed(2)}</text>`;
+    }
+  }
+
+  // Legend
+  const ly = labelH + nT*cellH + 20;
+  svg += `<text x="${labelW}" y="${ly}" font-size="11" fill="#5a5a55">Positivo:</text>`;
+  const steps=[-1,-0.5,0,0.5,1];
+  for(let i=0;i<steps.length;i++){
+    const c=rToColor(steps[i],0.01);
+    svg+=`<rect x="${labelW+65+i*22}" y="${ly-10}" width="20" height="14" rx="3" fill="${c}" stroke="#ccc" stroke-width="0.5"/>`;
+    svg+=`<text x="${labelW+75+i*22}" y="${ly+8}" text-anchor="middle" font-size="9" fill="#888">${steps[i]>0?'+'+steps[i]:steps[i]}</text>`;
+  }
+  svg+=`<text x="${labelW+65+5*22+6}" y="${ly}" font-size="11" fill="#5a5a55">Negativo: borde oscuro = p≤${STATE.results.alpha}</text>`;
+  svg += `</svg>`;
+
+  document.getElementById('heatmap-content').innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <p style="font-size:12.5px;color:var(--text2);margin-bottom:12px">Verde = correlación positiva · Naranja/rojo = correlación negativa · Borde oscuro y *** = significativo</p>
+      <div class="heatmap-container">${svg}</div>
+    </div>`;
+}
+
+// ─── RENDER: ORDENACION ────────────────────────────────────────────────────
+function renderOrdinacion() {
+  const { R, L, Q, siteNames, speciesNames, envNames, traitNames } = STATE.mats;
+  const nS=siteNames.length, nSp=speciesNames.length, nE=envNames.length, nT=traitNames.length;
+
+  // PCA helper
+  function center(mat) {
+    const nR=mat.length, nC=mat[0].length;
+    const means = Array.from({length:nC},(_,c)=>mat.reduce((s,r)=>s+r[c],0)/nR);
+    return mat.map(row=>row.map((v,c)=>v-means[c]));
+  }
+  function matMul(A, B) {
+    return A.map(row=>B[0].map((_,j)=>row.reduce((s,v,k)=>s+v*B[k][j],0)));
+  }
+  function transpose(M){ return M[0].map((_,i)=>M.map(r=>r[i])); }
+
+  function normalize(arr){ const m=Math.max(...arr.map(Math.abs),0.001); return arr.map(v=>v/m); }
+
+  // Simple 2D PCA via power iteration (2 components)
+  function pca2D(mat) {
+    const C = center(mat);
+    const nR=C.length, nC=C[0].length;
+    const cov = matMul(transpose(C), C).map(r=>r.map(v=>v/nR));
+    // Two power iterations
+    function powerIter(cov, n=60) {
+      let v = Array.from({length:cov.length},()=>Math.random()-0.5);
+      for(let i=0;i<n;i++){
+        let nv=cov.map(row=>row.reduce((s,c,j)=>s+c*v[j],0));
+        const norm=Math.sqrt(nv.reduce((s,x)=>s+x*x,0));
+        v=nv.map(x=>x/norm);
+      }
+      const lambda=v.reduce((s,vi,i)=>s+vi*cov[i].reduce((ss,c,j)=>ss+c*v[j],0),0);
+      return {v, lambda};
+    }
+    const {v:v1,lambda:l1} = powerIter(cov);
+    const deflated = cov.map((row,i)=>row.map((c,j)=>c-l1*v1[i]*v1[j]));
+    const {v:v2} = powerIter(deflated);
+    const scores = C.map(row=>[
+      row.reduce((s,c,j)=>s+c*v1[j],0),
+      row.reduce((s,c,j)=>s+c*v2[j],0)
+    ]);
+    return { scores, loadings: [v1,v2] };
+  }
+
+  // Compute ordinations
+  const ordSites = pca2D(R);
+  const ordSp = pca2D(Q);
+  // Weighted average of species positions in site space
+  const spScores = Array.from({length:nSp},(_,j)=>{
+    let wx=0,wy=0,w=0;
+    for(let i=0;i<nS;i++){wx+=L[i][j]*ordSites.scores[i][0];wy+=L[i][j]*ordSites.scores[i][1];w+=L[i][j];}
+    return w>0?[wx/w,wy/w]:[0,0];
+  });
+
+  function scaleScores(scores) {
+    const xs=scores.map(s=>s[0]),ys=scores.map(s=>s[1]);
+    const mx=Math.max(...xs.map(Math.abs),0.001),my=Math.max(...ys.map(Math.abs),0.001);
+    return scores.map(s=>[s[0]/mx,s[1]/my]);
+  }
+
+  const sSite = scaleScores(ordSites.scores);
+  const sSp = scaleScores(ordSp.scores);
+  const sSpW = scaleScores(spScores);
+
+  STATE.ordData = { sSite, sSp, sSpW, siteNames, speciesNames, envNames, traitNames, ordSites, ordSp };
+
+  document.getElementById('ord-content').innerHTML = `
+    <div class="subtabs">
+      <button class="subtab active" onclick="showSubtab(this,'ord-sites')">Sitios (R)</button>
+      <button class="subtab" onclick="showSubtab(this,'ord-species')">Especies en espacio ambiental</button>
+      <button class="subtab" onclick="showSubtab(this,'ord-traits')">Rasgos (Q)</button>
+      <button class="subtab" onclick="showSubtab(this,'ord-biplot')">Biplót combinado</button>
+    </div>
+    <div id="ord-sites" class="subcontent active">
+      <div class="card"><canvas id="c-sites" height="380"></canvas></div>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">PCA de variables ambientales. Cada punto es un sitio. Las flechas indican las variables que más contribuyen al gradiente.</p>
+    </div>
+    <div id="ord-species" class="subcontent">
+      <div class="card"><canvas id="c-sp" height="380"></canvas></div>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">Posición promedio ponderada de cada especie en el espacio ambiental, usando la abundancia en L como peso.</p>
+    </div>
+    <div id="ord-traits" class="subcontent">
+      <div class="card"><canvas id="c-traits" height="380"></canvas></div>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">PCA de rasgos funcionales. Cada punto es una especie. Las flechas indican los rasgos con mayor varianza.</p>
+    </div>
+    <div id="ord-biplot" class="subcontent">
+      <div class="card"><canvas id="c-biplot" height="420"></canvas></div>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">Biplót de sitios y variables ambientales superpuesto con las especies (promedio ponderado). Permite ver qué sitios y qué variables se relacionan con cada especie.</p>
+    </div>`;
+
+  setTimeout(() => {
+    drawOrdination('c-sites', sSite, siteNames, ordSites.loadings, envNames, 'Sitios — PCA ambiental', '#185FA5', '#1D9E75');
+    drawOrdWeighted('c-sp', sSpW, speciesNames, 'Especies — posición ponderada en espacio ambiental', '#D85A30');
+    drawOrdination('c-traits', sSp, speciesNames, ordSp.loadings, traitNames, 'Especies — PCA de rasgos', '#534AB7', '#BA7517');
+    drawBiplot('c-biplot', sSite, siteNames, sSpW, speciesNames, ordSites.loadings, envNames);
+  }, 50);
+}
+
+function showSubtab(btn, id) {
+  const parent = btn.closest('.subtabs').parentElement;
+  parent.querySelectorAll('.subtab').forEach(b => b.classList.remove('active'));
+  parent.querySelectorAll('.subcontent').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+  // Redraw after tab is visible so canvas dimensions are correct
+  if (STATE.ordData) {
+    const { sSite, sSp, sSpW, siteNames, speciesNames, envNames, traitNames, ordSites, ordSp } = STATE.ordData;
+    setTimeout(() => {
+      if (id === 'ord-sites') drawOrdination('c-sites', sSite, siteNames, ordSites.loadings, envNames, 'Sitios — PCA ambiental', '#185FA5', '#1D9E75');
+      if (id === 'ord-species') drawOrdWeighted('c-sp', sSpW, speciesNames, 'Especies — posición ponderada en espacio ambiental', '#D85A30');
+      if (id === 'ord-traits') drawOrdination('c-traits', sSp, speciesNames, ordSp.loadings, traitNames, 'Especies — PCA de rasgos', '#534AB7', '#BA7517');
+      if (id === 'ord-biplot') drawBiplot('c-biplot', sSite, siteNames, sSpW, speciesNames, ordSites.loadings, envNames);
+    }, 30);
+  }
+}
+
+function makeCanvas(id) {
+  const canvas = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  // Walk up to find a visible ancestor with real width
+  let el = canvas.parentElement;
+  let w = 0;
+  while (el && w < 100) { w = el.offsetWidth; el = el.parentElement; }
+  w = Math.max(w - 40, 300);
+  const h = parseInt(canvas.getAttribute('height')) || 400;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, w, h };
+}
+
+// Convert normalized scores to canvas coords with safe padding
+function makeCoordFn(scores, w, h, padL, padR, padT, padB) {
+  const xs = scores.map(s => s[0]), ys = scores.map(s => s[1]);
+  const xMin = Math.min(...xs, -0.1), xMax = Math.max(...xs, 0.1);
+  const yMin = Math.min(...ys, -0.1), yMax = Math.max(...ys, 0.1);
+  const xRange = xMax - xMin || 1, yRange = yMax - yMin || 1;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  return {
+    toX: v => padL + (v - xMin) / xRange * plotW,
+    toY: v => padT + plotH - (v - yMin) / yRange * plotH,
+    cx: padL + plotW / 2, cy: padT + plotH / 2,
+    plotW, plotH, padL, padR, padT, padB
+  };
+}
+
+function drawOrdination(id, scores, labels, loadings, loadLabels, title, dotColor, arrowColor) {
+  const { ctx, w, h } = makeCanvas(id);
+  const PAD = { l: 55, r: 30, t: 36, b: 36 };
+
+  ctx.fillStyle = '#fafaf8'; ctx.fillRect(0, 0, w, h);
+
+  // Title
+  ctx.fillStyle = '#1a1a18'; ctx.font = '500 13px Segoe UI';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(title, w / 2, 10);
+
+  // Compute arrow scale from loadings (normalize to fit plot area)
+  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b;
+  const cx = PAD.l + plotW / 2, cy = PAD.t + plotH / 2;
+  const sc = Math.min(plotW, plotH) * 0.40;
+
+  // Clip to plot area
+  ctx.save(); ctx.beginPath();
+  ctx.rect(PAD.l - 20, PAD.t - 20, plotW + 40, plotH + 40); ctx.clip();
+
+  // Axes
+  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(PAD.l, cy); ctx.lineTo(PAD.l + plotW, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, PAD.t); ctx.lineTo(cx, PAD.t + plotH); ctx.stroke();
+
+  // Arrows (loadings)
+  if (loadings && loadLabels) {
+    for (let j = 0; j < loadLabels.length; j++) {
+      const ax = loadings[0][j] * sc * 0.82, ay = loadings[1][j] * sc * 0.82;
+      ctx.strokeStyle = arrowColor + 'aa'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ax, cy - ay); ctx.stroke();
+      // Arrowhead
+      const angle = Math.atan2(-ay, ax);
+      ctx.fillStyle = arrowColor; ctx.beginPath();
+      ctx.moveTo(cx + ax, cy - ay);
+      ctx.lineTo(cx + ax - 7*Math.cos(angle-0.35), cy - ay + 7*Math.sin(angle-0.35));
+      ctx.lineTo(cx + ax - 7*Math.cos(angle+0.35), cy - ay + 7*Math.sin(angle+0.35));
+      ctx.closePath(); ctx.fill();
+      // Label
+      ctx.fillStyle = arrowColor; ctx.font = 'bold 10.5px Segoe UI';
+      const lx = cx + ax * 1.22, ly = cy - ay * 1.22;
+      ctx.textAlign = ax >= 0 ? 'left' : 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(loadLabels[j], lx, ly);
+    }
+  }
+
+  // Points
+  for (let i = 0; i < scores.length; i++) {
+    const px = cx + scores[i][0] * sc, py = cy - scores[i][1] * sc;
+    ctx.fillStyle = dotColor; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a1a18'; ctx.font = '11px Segoe UI';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(labels[i], px, py - 8);
+  }
+  ctx.restore();
+
+  // Axis labels
+  ctx.fillStyle = '#aaa'; ctx.font = '11px Segoe UI';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText('PC1 →', PAD.l + plotW - 2, cy - 8);
+  ctx.textAlign = 'left'; ctx.fillText('← PC2', cx + 4, PAD.t + 10);
+}
+
+function drawOrdWeighted(id, scores, labels, title, dotColor) {
+  const { ctx, w, h } = makeCanvas(id);
+  const PAD = { l: 55, r: 30, t: 36, b: 36 };
+  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b;
+  const cx = PAD.l + plotW / 2, cy = PAD.t + plotH / 2;
+  const sc = Math.min(plotW, plotH) * 0.42;
+
+  ctx.fillStyle = '#fafaf8'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#1a1a18'; ctx.font = '500 13px Segoe UI';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(title, w / 2, 10);
+
+  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(PAD.l, cy); ctx.lineTo(PAD.l + plotW, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, PAD.t); ctx.lineTo(cx, PAD.t + plotH); ctx.stroke();
+
+  ctx.save(); ctx.beginPath();
+  ctx.rect(PAD.l - 20, PAD.t - 20, plotW + 40, plotH + 40); ctx.clip();
+
+  for (let i = 0; i < scores.length; i++) {
+    const px = cx + scores[i][0] * sc, py = cy - scores[i][1] * sc;
+    ctx.fillStyle = dotColor; ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'white'; ctx.font = 'bold 10px Segoe UI';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(i + 1, px, py);
+    ctx.fillStyle = '#1a1a18'; ctx.font = '11px Segoe UI';
+    ctx.textBaseline = 'bottom'; ctx.fillText(labels[i], px, py - 10);
+  }
+  ctx.restore();
+}
+
+function drawBiplot(id, sSite, siteNames, sSpW, speciesNames, loadings, envNames) {
+  const { ctx, w, h } = makeCanvas(id);
+  const PAD = { l: 55, r: 30, t: 36, b: 48 };
+  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b;
+  const cx = PAD.l + plotW / 2, cy = PAD.t + plotH / 2;
+  const sc = Math.min(plotW, plotH) * 0.38;
+
+  ctx.fillStyle = '#fafaf8'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#1a1a18'; ctx.font = '500 13px Segoe UI';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Biplót — Sitios + Especies + Variables ambientales', w / 2, 10);
+
+  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(PAD.l, cy); ctx.lineTo(PAD.l + plotW, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, PAD.t); ctx.lineTo(cx, PAD.t + plotH); ctx.stroke();
+
+  ctx.save(); ctx.beginPath();
+  ctx.rect(PAD.l - 20, PAD.t - 20, plotW + 40, plotH + 40); ctx.clip();
+
+  // Env arrows
+  for (let j = 0; j < envNames.length; j++) {
+    const ax = loadings[0][j] * sc * 0.78, ay = loadings[1][j] * sc * 0.78;
+    ctx.strokeStyle = '#1D9E75bb'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ax, cy - ay); ctx.stroke();
+    const angle = Math.atan2(-ay, ax);
+    ctx.fillStyle = '#1D9E75'; ctx.beginPath();
+    ctx.moveTo(cx + ax, cy - ay);
+    ctx.lineTo(cx + ax - 7*Math.cos(angle-0.35), cy - ay + 7*Math.sin(angle-0.35));
+    ctx.lineTo(cx + ax - 7*Math.cos(angle+0.35), cy - ay + 7*Math.sin(angle+0.35));
+    ctx.closePath(); ctx.fill();
+    ctx.font = 'bold 10px Segoe UI'; ctx.fillStyle = '#085041';
+    ctx.textAlign = ax >= 0 ? 'left' : 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(envNames[j], cx + ax * 1.22, cy - ay * 1.22);
+  }
+
+  // Sites
+  for (let i = 0; i < sSite.length; i++) {
+    const px = cx + sSite[i][0] * sc, py = cy - sSite[i][1] * sc;
+    ctx.fillStyle = '#185FA5'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'white'; ctx.font = 'bold 9px Segoe UI';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(i + 1, px, py);
+    ctx.fillStyle = '#185FA5'; ctx.font = '11px Segoe UI'; ctx.textBaseline = 'bottom';
+    ctx.fillText(siteNames[i], px, py - 9);
+  }
+
+  // Species triangles
+  for (let j = 0; j < sSpW.length; j++) {
+    const px = cx + sSpW[j][0] * sc, py = cy - sSpW[j][1] * sc;
+    ctx.fillStyle = '#D85A30'; ctx.beginPath();
+    ctx.moveTo(px, py - 7); ctx.lineTo(px + 6, py + 5); ctx.lineTo(px - 6, py + 5);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#D85A30'; ctx.font = 'italic 10.5px Segoe UI';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(speciesNames[j], px + 9, py);
+  }
+  ctx.restore();
+
+  // Legend at bottom
+  const ly = h - 20;
+  ctx.fillStyle = '#185FA5'; ctx.beginPath(); ctx.arc(PAD.l + 8, ly, 5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#333'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('Sitios', PAD.l + 17, ly);
+
+  ctx.fillStyle = '#D85A30'; ctx.beginPath();
+  ctx.moveTo(PAD.l + 72, ly - 6); ctx.lineTo(PAD.l + 78, ly + 5); ctx.lineTo(PAD.l + 66, ly + 5);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#333'; ctx.fillText('Especies', PAD.l + 83, ly);
+
+  ctx.strokeStyle = '#1D9E75'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(PAD.l + 150, ly); ctx.lineTo(PAD.l + 166, ly); ctx.stroke();
+  ctx.fillStyle = '#333'; ctx.fillText('Variables amb.', PAD.l + 170, ly);
+}
+
+// ─── EXPORT ────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const { obs, pvals } = STATE.results;
+  const { traitNames, envNames } = STATE.mats;
+  let csv='Rasgo,Variable,r_observado,p_valor,significancia\n';
+  for(let t=0;t<traitNames.length;t++) for(let e=0;e<envNames.length;e++){
+    const p=pvals[t][e];
+    const sig=p<=0.001?'***':p<=0.01?'**':p<=0.05?'*':'ns';
+    csv+=`${traitNames[t]},${envNames[e]},${obs[t][e].toFixed(6)},${p.toFixed(6)},${sig}\n`;
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='fourth_corner_results.csv'; a.click();
+}
+</script>
+</body>
+</html>
