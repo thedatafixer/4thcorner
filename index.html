@@ -794,7 +794,7 @@ function renderTabla() {
       <th style="text-align:center">r observado</th>
       <th style="text-align:center">p-valor</th>
       <th style="text-align:center">Sig.</th>
-      <th style="min-width:130px">Magnitud y dirección</th>
+      <th style="min-width:150px">Magnitud y dirección</th>
     </tr></thead><tbody>`;
 
   for(let t=0;t<nT;t++) for(let e=0;e<nE;e++){
@@ -807,15 +807,27 @@ function renderTabla() {
     // r value: colored only when significant
     const rCls = sig ? (r>0?'r-pos':'r-neg') : '';
     const rStyle = sig ? '' : 'color:var(--text3)';
-    // bar: proportional to |r|, colored when sig, gray when not
-    const bW = Math.round(Math.abs(r)/maxR*90);
+    // diverging bar: center line at 50%, positive grows right, negative grows left
+    const halfW = 70; // half the total bar area (px)
+    const bW = Math.round(Math.abs(r)/maxR * halfW);
     const barColor = !sig ? '#c5cdd8' : (r>0 ? '#1D9E75' : '#D85A30');
+    const barHtml = r >= 0
+      ? `<div style="display:flex;align-items:center;width:${halfW*2}px">
+           <div style="width:${halfW}px;display:flex;justify-content:flex-end"></div>
+           <div style="width:2px;height:14px;background:#c5cdd8;flex-shrink:0"></div>
+           <div style="width:${bW}px;height:10px;background:${barColor};border-radius:0 2px 2px 0;flex-shrink:0"></div>
+         </div>`
+      : `<div style="display:flex;align-items:center;width:${halfW*2}px">
+           <div style="width:${halfW-bW}px;flex-shrink:0"></div>
+           <div style="width:${bW}px;height:10px;background:${barColor};border-radius:2px 0 0 2px;flex-shrink:0"></div>
+           <div style="width:2px;height:14px;background:#c5cdd8;flex-shrink:0"></div>
+         </div>`;
     html+=`<tr class="${sigCls}">
       <td>${traitNames[t]}</td><td>${envNames[e]}</td>
       <td style="text-align:center;${rStyle}" class="${rCls}">${r.toFixed(4)}</td>
       <td style="text-align:center">${p.toFixed(4)}</td>
       <td style="text-align:center;font-weight:700;letter-spacing:1px">${sigLabel}</td>
-      <td><span style="display:inline-block;width:${bW}px;height:10px;border-radius:2px;background:${barColor};vertical-align:middle"></span></td>
+      <td>${barHtml}</td>
     </tr>`;
   }
 
@@ -827,7 +839,7 @@ function renderTabla() {
     <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div> r positivo significativo</div>
     <div class="legend-item"><div class="legend-dot" style="background:#D85A30"></div> r negativo significativo</div>
     <div class="legend-item"><div class="legend-dot" style="background:#c5cdd8"></div> no significativo</div>
-  </div><div style="margin-top:8px;font-size:11px;color:var(--text3)">Las barras son proporcionales al valor de r. El color indica dirección solo cuando p ≤ α.</div></div>`;
+  </div><div style="margin-top:8px;font-size:11px;color:var(--text3)">Las barras son proporcionales a |r| y divergen desde el centro: positivas → derecha · negativas ← izquierda · color solo cuando p ≤ α.</div></div>`;
 
   html += `<div class="btn-row" style="margin-top:14px">
     <button class="btn btn-sm" onclick="exportCSV()">↓ Exportar CSV</button>
