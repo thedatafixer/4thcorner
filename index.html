@@ -799,19 +799,23 @@ function renderTabla() {
 
   for(let t=0;t<nT;t++) for(let e=0;e<nE;e++){
     const r=obs[t][e], p=pvals[t][e];
+    const sig = p<=alpha;
     let sigCls='', sigLabel='ns';
     if(p<=0.001){sigCls='sig3';sigLabel='***';}
     else if(p<=0.01){sigCls='sig2';sigLabel='**';}
     else if(p<=0.05){sigCls='sig1';sigLabel='*';}
-    const rCls = r>0?'r-pos':'r-neg';
+    // r value: colored only when significant
+    const rCls = sig ? (r>0?'r-pos':'r-neg') : '';
+    const rStyle = sig ? '' : 'color:var(--text3)';
+    // bar: proportional to |r|, colored when sig, gray when not
     const bW = Math.round(Math.abs(r)/maxR*90);
-    const barCls = r>0?'bar-pos':'bar-neg';
+    const barColor = !sig ? '#c5cdd8' : (r>0 ? '#1D9E75' : '#D85A30');
     html+=`<tr class="${sigCls}">
       <td>${traitNames[t]}</td><td>${envNames[e]}</td>
-      <td style="text-align:center" class="${rCls}">${r.toFixed(4)}</td>
+      <td style="text-align:center;${rStyle}" class="${rCls}">${r.toFixed(4)}</td>
       <td style="text-align:center">${p.toFixed(4)}</td>
       <td style="text-align:center;font-weight:700;letter-spacing:1px">${sigLabel}</td>
-      <td><span class="${barCls}" style="width:${bW}px"></span></td>
+      <td><span style="display:inline-block;width:${bW}px;height:10px;border-radius:2px;background:${barColor};vertical-align:middle"></span></td>
     </tr>`;
   }
 
@@ -820,9 +824,10 @@ function renderTabla() {
     <div class="legend-item"><div class="legend-dot" style="background:#dbeeff"></div> p ≤ 0.05 *</div>
     <div class="legend-item"><div class="legend-dot" style="background:#b8d9f7"></div> p ≤ 0.01 **</div>
     <div class="legend-item"><div class="legend-dot" style="background:#378ADD"></div> p ≤ 0.001 ***</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> positivo</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--coral)"></div> negativo</div>
-  </div></div>`;
+    <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div> r positivo significativo</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#D85A30"></div> r negativo significativo</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c5cdd8"></div> no significativo</div>
+  </div><div style="margin-top:8px;font-size:11px;color:var(--text3)">Las barras son proporcionales al valor de r. El color indica dirección solo cuando p ≤ α.</div></div>`;
 
   html += `<div class="btn-row" style="margin-top:14px">
     <button class="btn btn-sm" onclick="exportCSV()">↓ Exportar CSV</button>
