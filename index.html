@@ -1224,203 +1224,134 @@ function showSubtab(btn, id) {
   }
 }
 
+// ─── SVG ORDINATION (vectorial real) ──────────────────────────────────────
 function makeCanvas(id) {
+  // Returns dimensions only — SVG is injected instead of canvas
   const canvas = document.getElementById(id);
-  const dpr = window.devicePixelRatio || 1;
-  // Walk up to find a visible ancestor with real width
-  let el = canvas.parentElement;
+  let el = canvas ? canvas.parentElement : document.getElementById('ord-content');
   let w = 0;
   while (el && w < 100) { w = el.offsetWidth; el = el.parentElement; }
   w = Math.max(w - 40, 300);
-  const h = parseInt(canvas.getAttribute('height')) || 400;
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  return { ctx, w, h };
+  const h = parseInt(canvas ? canvas.getAttribute('height') : '380') || 380;
+  return { w, h };
 }
 
-// Convert normalized scores to canvas coords with safe padding
-function makeCoordFn(scores, w, h, padL, padR, padT, padB) {
-  const xs = scores.map(s => s[0]), ys = scores.map(s => s[1]);
-  const xMin = Math.min(...xs, -0.1), xMax = Math.max(...xs, 0.1);
-  const yMin = Math.min(...ys, -0.1), yMax = Math.max(...ys, 0.1);
-  const xRange = xMax - xMin || 1, yRange = yMax - yMin || 1;
-  const plotW = w - padL - padR, plotH = h - padT - padB;
-  return {
-    toX: v => padL + (v - xMin) / xRange * plotW,
-    toY: v => padT + plotH - (v - yMin) / yRange * plotH,
-    cx: padL + plotW / 2, cy: padT + plotH / 2,
-    plotW, plotH, padL, padR, padT, padB
-  };
+function injectSVG(canvasId, svgStr) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.style.display = 'none';
+  const wrapId = canvasId + '-svg-wrap';
+  let existing = document.getElementById(wrapId);
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = wrapId; div.style.width = '100%';
+  div.innerHTML = svgStr;
+  canvas.parentElement.appendChild(div);
+}
+
+function arrowSVG(x1,y1,x2,y2,color) {
+  const angle = Math.atan2(y2-y1,x2-x1), s=7;
+  const p1x=x2-s*Math.cos(angle-0.35), p1y=y2-s*Math.sin(angle-0.35);
+  const p2x=x2-s*Math.cos(angle+0.35), p2y=y2-s*Math.sin(angle+0.35);
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-opacity="0.75" stroke-width="1.5"/>
+<polygon points="${x2},${y2} ${p1x},${p1y} ${p2x},${p2y}" fill="${color}"/>`;
+}
+
+function svgOpen(w,h,title) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" font-family="'Segoe UI',system-ui,sans-serif">
+<rect width="${w}" height="${h}" fill="white"/>
+<text x="${w/2}" y="20" text-anchor="middle" font-size="13" font-weight="500" fill="#1a1a18">${title}</text>`;
 }
 
 function drawOrdination(id, scores, labels, loadings, loadLabels, title, dotColor, arrowColor) {
-  const { ctx, w, h } = makeCanvas(id);
-  const PAD = { l: 55, r: 30, t: 36, b: 36 };
-
-  ctx.fillStyle = '#fafaf8'; ctx.fillRect(0, 0, w, h);
-
-  // Title
-  ctx.fillStyle = '#1a1a18'; ctx.font = '500 13px Segoe UI';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText(title, w / 2, 10);
-
-  // Compute arrow scale from loadings (normalize to fit plot area)
-  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b;
-  const cx = PAD.l + plotW / 2, cy = PAD.t + plotH / 2;
-  const sc = Math.min(plotW, plotH) * 0.40;
-
-  // Clip to plot area
-  ctx.save(); ctx.beginPath();
-  ctx.rect(PAD.l - 20, PAD.t - 20, plotW + 40, plotH + 40); ctx.clip();
-
-  // Axes
-  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(PAD.l, cy); ctx.lineTo(PAD.l + plotW, cy); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, PAD.t); ctx.lineTo(cx, PAD.t + plotH); ctx.stroke();
-
-  // Arrows (loadings)
+  const {w,h} = makeCanvas(id);
+  const l=55,r=40,t=36,b=36, pw=w-l-r, ph=h-t-b, cx=l+pw/2, cy=t+ph/2, sc=Math.min(pw,ph)*0.40;
+  let svg = svgOpen(w,h,title);
+  svg += `<line x1="${l}" y1="${cy}" x2="${l+pw}" y2="${cy}" stroke="#ddd" stroke-width="0.8"/>
+<line x1="${cx}" y1="${t}" x2="${cx}" y2="${t+ph}" stroke="#ddd" stroke-width="0.8"/>
+<text x="${l+pw-4}" y="${cy-8}" text-anchor="end" font-size="10" fill="#bbb">PC1 →</text>
+<text x="${cx+4}" y="${t+14}" font-size="10" fill="#bbb">← PC2</text>`;
   if (loadings && loadLabels) {
-    for (let j = 0; j < loadLabels.length; j++) {
-      const ax = loadings[0][j] * sc * 0.82, ay = loadings[1][j] * sc * 0.82;
-      ctx.strokeStyle = arrowColor + 'aa'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ax, cy - ay); ctx.stroke();
-      // Arrowhead
-      const angle = Math.atan2(-ay, ax);
-      ctx.fillStyle = arrowColor; ctx.beginPath();
-      ctx.moveTo(cx + ax, cy - ay);
-      ctx.lineTo(cx + ax - 7*Math.cos(angle-0.35), cy - ay + 7*Math.sin(angle-0.35));
-      ctx.lineTo(cx + ax - 7*Math.cos(angle+0.35), cy - ay + 7*Math.sin(angle+0.35));
-      ctx.closePath(); ctx.fill();
-      // Label
-      ctx.fillStyle = arrowColor; ctx.font = 'bold 10.5px Segoe UI';
-      const lx = cx + ax * 1.22, ly = cy - ay * 1.22;
-      ctx.textAlign = ax >= 0 ? 'left' : 'right'; ctx.textBaseline = 'middle';
-      ctx.fillText(loadLabels[j], lx, ly);
+    for (let j=0;j<loadLabels.length;j++) {
+      const ax=loadings[0][j]*sc*0.82, ay=loadings[1][j]*sc*0.82;
+      svg += arrowSVG(cx,cy,cx+ax,cy-ay,arrowColor);
+      const anc=ax>=0?'start':'end';
+      svg += `<text x="${cx+ax*1.22}" y="${cy-ay*1.22}" text-anchor="${anc}" dominant-baseline="middle" font-size="10.5" font-weight="bold" fill="${arrowColor}">${loadLabels[j]}</text>`;
     }
   }
-
-  // Points
-  for (let i = 0; i < scores.length; i++) {
-    const px = cx + scores[i][0] * sc, py = cy - scores[i][1] * sc;
-    ctx.fillStyle = dotColor; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#1a1a18'; ctx.font = '11px Segoe UI';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    ctx.fillText(labels[i], px, py - 8);
+  for (let i=0;i<scores.length;i++) {
+    const px=cx+scores[i][0]*sc, py=cy-scores[i][1]*sc;
+    svg += `<circle cx="${px}" cy="${py}" r="6" fill="${dotColor}"/>
+<circle cx="${px}" cy="${py}" r="2.5" fill="white"/>
+<text x="${px}" y="${py-9}" text-anchor="middle" font-size="11" fill="#1a1a18">${labels[i]}</text>`;
   }
-  ctx.restore();
-
-  // Axis labels
-  ctx.fillStyle = '#aaa'; ctx.font = '11px Segoe UI';
-  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  ctx.fillText('PC1 →', PAD.l + plotW - 2, cy - 8);
-  ctx.textAlign = 'left'; ctx.fillText('← PC2', cx + 4, PAD.t + 10);
+  svg += '</svg>';
+  injectSVG(id, svg);
 }
 
 function drawOrdWeighted(id, scores, labels, title, dotColor) {
-  const { ctx, w, h } = makeCanvas(id);
-  const PAD = { l: 55, r: 30, t: 36, b: 36 };
-  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b;
-  const cx = PAD.l + plotW / 2, cy = PAD.t + plotH / 2;
-  const sc = Math.min(plotW, plotH) * 0.42;
-
-  ctx.fillStyle = '#fafaf8'; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#1a1a18'; ctx.font = '500 13px Segoe UI';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(title, w / 2, 10);
-
-  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(PAD.l, cy); ctx.lineTo(PAD.l + plotW, cy); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, PAD.t); ctx.lineTo(cx, PAD.t + plotH); ctx.stroke();
-
-  ctx.save(); ctx.beginPath();
-  ctx.rect(PAD.l - 20, PAD.t - 20, plotW + 40, plotH + 40); ctx.clip();
-
-  for (let i = 0; i < scores.length; i++) {
-    const px = cx + scores[i][0] * sc, py = cy - scores[i][1] * sc;
-    ctx.fillStyle = dotColor; ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'white'; ctx.font = 'bold 10px Segoe UI';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(i + 1, px, py);
-    ctx.fillStyle = '#1a1a18'; ctx.font = '11px Segoe UI';
-    ctx.textBaseline = 'bottom'; ctx.fillText(labels[i], px, py - 10);
+  const {w,h} = makeCanvas(id);
+  const l=55,r=40,t=36,b=36, pw=w-l-r, ph=h-t-b, cx=l+pw/2, cy=t+ph/2, sc=Math.min(pw,ph)*0.42;
+  let svg = svgOpen(w,h,title);
+  svg += `<line x1="${l}" y1="${cy}" x2="${l+pw}" y2="${cy}" stroke="#ddd" stroke-width="0.8"/>
+<line x1="${cx}" y1="${t}" x2="${cx}" y2="${t+ph}" stroke="#ddd" stroke-width="0.8"/>`;
+  for (let i=0;i<scores.length;i++) {
+    const px=cx+scores[i][0]*sc, py=cy-scores[i][1]*sc;
+    svg += `<circle cx="${px}" cy="${py}" r="7" fill="${dotColor}"/>
+<text x="${px}" y="${py}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="bold" fill="white">${i+1}</text>
+<text x="${px}" y="${py-11}" text-anchor="middle" font-size="11" fill="#1a1a18">${labels[i]}</text>`;
   }
-  ctx.restore();
+  svg += '</svg>';
+  injectSVG(id, svg);
 }
 
 function drawBiplot(id, sSite, siteNames, sSpW, speciesNames, loadings, envNames) {
-  const { ctx, w, h } = makeCanvas(id);
-  const PAD = { l: 55, r: 30, t: 36, b: 48 };
-  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b;
-  const cx = PAD.l + plotW / 2, cy = PAD.t + plotH / 2;
-  const sc = Math.min(plotW, plotH) * 0.38;
-
-  ctx.fillStyle = '#fafaf8'; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#1a1a18'; ctx.font = '500 13px Segoe UI';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText('Biplót — Sitios + Especies + Variables ambientales', w / 2, 10);
-
-  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(PAD.l, cy); ctx.lineTo(PAD.l + plotW, cy); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, PAD.t); ctx.lineTo(cx, PAD.t + plotH); ctx.stroke();
-
-  ctx.save(); ctx.beginPath();
-  ctx.rect(PAD.l - 20, PAD.t - 20, plotW + 40, plotH + 40); ctx.clip();
-
-  // Env arrows
-  for (let j = 0; j < envNames.length; j++) {
-    const ax = loadings[0][j] * sc * 0.78, ay = loadings[1][j] * sc * 0.78;
-    ctx.strokeStyle = '#1D9E75bb'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ax, cy - ay); ctx.stroke();
-    const angle = Math.atan2(-ay, ax);
-    ctx.fillStyle = '#1D9E75'; ctx.beginPath();
-    ctx.moveTo(cx + ax, cy - ay);
-    ctx.lineTo(cx + ax - 7*Math.cos(angle-0.35), cy - ay + 7*Math.sin(angle-0.35));
-    ctx.lineTo(cx + ax - 7*Math.cos(angle+0.35), cy - ay + 7*Math.sin(angle+0.35));
-    ctx.closePath(); ctx.fill();
-    ctx.font = 'bold 10px Segoe UI'; ctx.fillStyle = '#085041';
-    ctx.textAlign = ax >= 0 ? 'left' : 'right'; ctx.textBaseline = 'middle';
-    ctx.fillText(envNames[j], cx + ax * 1.22, cy - ay * 1.22);
+  const {w,h} = makeCanvas(id);
+  const l=55,r=40,t=36,b=48, pw=w-l-r, ph=h-t-b, cx=l+pw/2, cy=t+ph/2, sc=Math.min(pw,ph)*0.38, ly=h-20;
+  let svg = svgOpen(w,h,'Biplót — Sitios + Especies + Variables ambientales');
+  svg += `<line x1="${l}" y1="${cy}" x2="${l+pw}" y2="${cy}" stroke="#ddd" stroke-width="0.8"/>
+<line x1="${cx}" y1="${t}" x2="${cx}" y2="${t+ph}" stroke="#ddd" stroke-width="0.8"/>`;
+  for (let j=0;j<envNames.length;j++) {
+    const ax=loadings[0][j]*sc*0.78, ay=loadings[1][j]*sc*0.78;
+    svg += arrowSVG(cx,cy,cx+ax,cy-ay,'#1D9E75');
+    const anc=ax>=0?'start':'end';
+    svg += `<text x="${cx+ax*1.22}" y="${cy-ay*1.22}" text-anchor="${anc}" dominant-baseline="middle" font-size="10" font-weight="bold" fill="#085041">${envNames[j]}</text>`;
   }
-
-  // Sites
-  for (let i = 0; i < sSite.length; i++) {
-    const px = cx + sSite[i][0] * sc, py = cy - sSite[i][1] * sc;
-    ctx.fillStyle = '#185FA5'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'white'; ctx.font = 'bold 9px Segoe UI';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(i + 1, px, py);
-    ctx.fillStyle = '#185FA5'; ctx.font = '11px Segoe UI'; ctx.textBaseline = 'bottom';
-    ctx.fillText(siteNames[i], px, py - 9);
+  for (let i=0;i<sSite.length;i++) {
+    const px=cx+sSite[i][0]*sc, py=cy-sSite[i][1]*sc;
+    svg += `<circle cx="${px}" cy="${py}" r="6" fill="#185FA5"/>
+<text x="${px}" y="${py}" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="bold" fill="white">${i+1}</text>
+<text x="${px}" y="${py-10}" text-anchor="middle" font-size="11" fill="#185FA5">${siteNames[i]}</text>`;
   }
-
-  // Species triangles
-  for (let j = 0; j < sSpW.length; j++) {
-    const px = cx + sSpW[j][0] * sc, py = cy - sSpW[j][1] * sc;
-    ctx.fillStyle = '#D85A30'; ctx.beginPath();
-    ctx.moveTo(px, py - 7); ctx.lineTo(px + 6, py + 5); ctx.lineTo(px - 6, py + 5);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#D85A30'; ctx.font = 'italic 10.5px Segoe UI';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(speciesNames[j], px + 9, py);
+  for (let j=0;j<sSpW.length;j++) {
+    const px=cx+sSpW[j][0]*sc, py=cy-sSpW[j][1]*sc;
+    svg += `<polygon points="${px},${py-7} ${px+6},${py+5} ${px-6},${py+5}" fill="#D85A30"/>
+<text x="${px+9}" y="${py}" dominant-baseline="middle" font-size="10.5" font-style="italic" fill="#D85A30">${speciesNames[j]}</text>`;
   }
-  ctx.restore();
+  svg += `<circle cx="${l+8}" cy="${ly}" r="5" fill="#185FA5"/>
+<text x="${l+17}" y="${ly}" dominant-baseline="middle" font-size="11" fill="#333">Sitios</text>
+<polygon points="${l+72},${ly-6} ${l+78},${ly+5} ${l+66},${ly+5}" fill="#D85A30"/>
+<text x="${l+83}" y="${ly}" dominant-baseline="middle" font-size="11" fill="#333">Especies</text>
+<line x1="${l+150}" y1="${ly}" x2="${l+166}" y2="${ly}" stroke="#1D9E75" stroke-width="1.8"/>
+<text x="${l+170}" y="${ly}" dominant-baseline="middle" font-size="11" fill="#333">Variables amb.</text>
+</svg>`;
+  injectSVG(id, svg);
+}
 
-  // Legend at bottom
-  const ly = h - 20;
-  ctx.fillStyle = '#185FA5'; ctx.beginPath(); ctx.arc(PAD.l + 8, ly, 5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#333'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText('Sitios', PAD.l + 17, ly);
-
-  ctx.fillStyle = '#D85A30'; ctx.beginPath();
-  ctx.moveTo(PAD.l + 72, ly - 6); ctx.lineTo(PAD.l + 78, ly + 5); ctx.lineTo(PAD.l + 66, ly + 5);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#333'; ctx.fillText('Especies', PAD.l + 83, ly);
-
-  ctx.strokeStyle = '#1D9E75'; ctx.lineWidth = 1.8;
-  ctx.beginPath(); ctx.moveTo(PAD.l + 150, ly); ctx.lineTo(PAD.l + 166, ly); ctx.stroke();
-  ctx.fillStyle = '#333'; ctx.fillText('Variables amb.', PAD.l + 170, ly);
+// ─── DOWNLOAD SVG VECTORIAL ────────────────────────────────────────────────
+function downloadCanvasAsSVG(canvasId, filename) {
+  const wrap = document.getElementById(canvasId + '-svg-wrap');
+  if (!wrap) { alert('Primero calculá el análisis y abrí este gráfico.'); return; }
+  const svgEl = wrap.querySelector('svg');
+  if (!svgEl) { alert('No se encontró el SVG.'); return; }
+  const svgStr = '<?xml version="1.0" encoding="UTF-8"?>\n' + svgEl.outerHTML;
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename + '.svg';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 // ─── EXPORT ────────────────────────────────────────────────────────────────
@@ -1435,36 +1366,6 @@ function exportCSV() {
   }
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='fourth_corner_results.csv'; a.click();
-}
-
-// ─── DOWNLOAD ORDINATION AS SVG ────────────────────────────────────────────
-function downloadCanvasAsSVG(canvasId, filename) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) { alert('Primero calculá el análisis y abrí este gráfico.'); return; }
-  // Use CSS display size (not internal pixel buffer size)
-  const w = canvas.offsetWidth || parseInt(canvas.style.width) || 600;
-  const h = canvas.offsetHeight || parseInt(canvas.style.height) || 380;
-  try {
-    const dataURL = canvas.toDataURL('image/png');
-    const svgContent = [
-      '<?xml version="1.0" encoding="UTF-8"?>',
-      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
-      `  <rect width="${w}" height="${h}" fill="white"/>`,
-      `  <image x="0" y="0" width="${w}" height="${h}" xlink:href="${dataURL}"/>`,
-      '</svg>'
-    ].join('\n');
-    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename + '.svg';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  } catch(e) {
-    alert('Error al generar el SVG: ' + e.message);
-  }
 }
 </script>
 
