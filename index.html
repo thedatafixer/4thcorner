@@ -100,7 +100,11 @@
   td { padding: 7px 12px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--bg2); }
-  .sig1 { background: #dbeeff; } .sig2 { background: #b8d9f7; } .sig3 { background: #378ADD; color: white; }
+  .sig1 { background: #dbeeff; }
+  .sig2 { background: #b8d9f7; }
+  .sig3 { background: #378ADD; }
+  .sig3 td { color: white !important; }
+  .sig3 td .r-pos, .sig3 td .r-neg { color: white !important; }
   .r-pos { color: var(--teal-dark); font-weight: 600; }
   .r-neg { color: var(--coral-dark); font-weight: 600; }
   .bar-pos { display: inline-block; height: 10px; background: var(--teal); border-radius: 2px; vertical-align: middle; }
@@ -1431,6 +1435,36 @@ function exportCSV() {
   }
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='fourth_corner_results.csv'; a.click();
+}
+
+// ─── DOWNLOAD ORDINATION AS SVG ────────────────────────────────────────────
+function downloadCanvasAsSVG(canvasId, filename) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) { alert('Primero calculá el análisis y abrí este gráfico.'); return; }
+  // Use CSS display size (not internal pixel buffer size)
+  const w = canvas.offsetWidth || parseInt(canvas.style.width) || 600;
+  const h = canvas.offsetHeight || parseInt(canvas.style.height) || 380;
+  try {
+    const dataURL = canvas.toDataURL('image/png');
+    const svgContent = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
+      `  <rect width="${w}" height="${h}" fill="white"/>`,
+      `  <image x="0" y="0" width="${w}" height="${h}" xlink:href="${dataURL}"/>`,
+      '</svg>'
+    ].join('\n');
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename + '.svg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch(e) {
+    alert('Error al generar el SVG: ' + e.message);
+  }
 }
 </script>
 
