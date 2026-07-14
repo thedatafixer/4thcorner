@@ -1176,18 +1176,22 @@ function renderOrdinacion() {
     <div id="ord-sites" class="subcontent active">
       <div class="card"><canvas id="c-sites" height="380"></canvas></div>
       <p style="font-size:12px;color:var(--text2);margin-top:8px">PCA de variables ambientales. Cada punto es un sitio. Las flechas indican las variables que más contribuyen al gradiente.</p>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-sites','PCA_ambiental_sitios')">↓ Descargar SVG</button></div>
     </div>
     <div id="ord-species" class="subcontent">
       <div class="card"><canvas id="c-sp" height="380"></canvas></div>
       <p style="font-size:12px;color:var(--text2);margin-top:8px">Posición promedio ponderada de cada especie en el espacio ambiental, usando la abundancia en L como peso.</p>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-sp','Especies_espacio_ambiental')">↓ Descargar SVG</button></div>
     </div>
     <div id="ord-traits" class="subcontent">
       <div class="card"><canvas id="c-traits" height="380"></canvas></div>
       <p style="font-size:12px;color:var(--text2);margin-top:8px">PCA de rasgos funcionales. Cada punto es una especie. Las flechas indican los rasgos con mayor varianza.</p>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-traits','PCA_rasgos')">↓ Descargar SVG</button></div>
     </div>
     <div id="ord-biplot" class="subcontent">
       <div class="card"><canvas id="c-biplot" height="420"></canvas></div>
       <p style="font-size:12px;color:var(--text2);margin-top:8px">Biplót de sitios y variables ambientales superpuesto con las especies (promedio ponderado). Permite ver qué sitios y qué variables se relacionan con cada especie.</p>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-biplot','Biplot_combinado')">↓ Descargar SVG</button></div>
     </div>`;
 
   setTimeout(() => {
