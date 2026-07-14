@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Análisis de Cuarta Esquina</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #f4f6f9; --bg2: #eaeff6; --bg3: #dde5f0;
@@ -199,41 +200,74 @@
     <!-- PAGE 1: DATOS -->
     <div class="page active" id="page-datos">
       <h2>Matrices de entrada</h2>
-      <p class="page-desc">Ingresá las tres matrices en formato CSV (separado por comas). La primera fila y primera columna son encabezados.</p>
+      <p class="page-desc">Cargá tu archivo Excel con tres hojas llamadas exactamente <strong>R</strong>, <strong>L</strong> y <strong>Q</strong>. La primera fila y primera columna de cada hoja deben ser los nombres de las variables y sitios/especies.</p>
+
+      <!-- Excel upload zone -->
+      <div id="upload-zone" style="border:2px dashed var(--border2);border-radius:14px;padding:36px 24px;text-align:center;background:white;margin-bottom:20px;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('xlsxInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--blue)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="handleDrop(event)">
+        <div style="font-size:36px;margin-bottom:10px">📂</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Hacé clic aquí o arrastrá tu archivo Excel</div>
+        <div style="font-size:12.5px;color:var(--text3)">Formato .xlsx · Tres hojas: <strong>R</strong> (ambiente), <strong>L</strong> (comunidad), <strong>Q</strong> (rasgos)</div>
+        <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="cargarExcel(this.files[0])">
+      </div>
+
+      <!-- Status per sheet -->
       <div class="grid3" style="margin-bottom:16px">
-        <div class="card">
-          <div class="card-title">
-            <span style="background:var(--teal-light);color:var(--teal-dark);padding:2px 8px;border-radius:4px;font-size:11px">R</span>
-            Matriz R — Ambiente
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">
+            <span style="background:var(--teal-light);color:var(--teal-dark);padding:2px 10px;border-radius:4px;font-size:11px">R</span>
+            &nbsp;Ambiente
           </div>
-          <div class="hint">Sitios × Variables ambientales</div>
-          <textarea id="matR" rows="8" placeholder="Sitio,Temp,pH,Humedad&#10;S1,25,6.5,40&#10;S2,22,6.8,50&#10;S3,18,7.2,65&#10;S4,14,7.6,75&#10;S5,10,7.9,85"></textarea>
-          <div style="margin-top:6px"><span id="statR" class="tag tag-warn">No cargada</span></div>
+          <span id="statR" class="tag tag-warn">No cargada</span>
         </div>
-        <div class="card">
-          <div class="card-title">
-            <span style="background:var(--blue-light);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:11px">L</span>
-            Matriz L — Comunidad
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">
+            <span style="background:var(--blue-light);color:var(--blue);padding:2px 10px;border-radius:4px;font-size:11px">L</span>
+            &nbsp;Comunidad
           </div>
-          <div class="hint">Sitios × Especies (abundancia o presencia/ausencia)</div>
-          <textarea id="matL" rows="8" placeholder="Sitio,Sp1,Sp2,Sp3,Sp4&#10;S1,5,2,0,1&#10;S2,3,4,1,0&#10;S3,1,3,4,2&#10;S4,0,1,5,4&#10;S5,2,0,3,5"></textarea>
-          <div style="margin-top:6px"><span id="statL" class="tag tag-warn">No cargada</span></div>
+          <span id="statL" class="tag tag-warn">No cargada</span>
         </div>
-        <div class="card">
-          <div class="card-title">
-            <span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:11px">Q</span>
-            Matriz Q — Rasgos
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">
+            <span style="background:var(--amber-light);color:var(--amber);padding:2px 10px;border-radius:4px;font-size:11px">Q</span>
+            &nbsp;Rasgos
           </div>
-          <div class="hint">Especies × Rasgos funcionales</div>
-          <textarea id="matQ" rows="8" placeholder="Especie,TallaMax,ToleranciaFrio,SLA&#10;Sp1,8,0.2,12&#10;Sp2,15,0.4,22&#10;Sp3,25,0.8,35&#10;Sp4,30,0.9,42"></textarea>
-          <div style="margin-top:6px"><span id="statQ" class="tag tag-warn">No cargada</span></div>
+          <span id="statQ" class="tag tag-warn">No cargada</span>
         </div>
       </div>
+
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="cargarDatos()">Cargar datos →</button>
-        <button class="btn" onclick="cargarEjemplo()">Cargar ejemplo</button>
+        <button class="btn" onclick="cargarEjemplo()">Cargar datos de ejemplo</button>
         <button class="btn btn-sm" onclick="limpiar()">Limpiar</button>
       </div>
+
+      <!-- Collapsible CSV fallback -->
+      <div style="margin-top:20px">
+        <button onclick="toggleCSV()" style="background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--text3);padding:0;font-family:inherit">
+          ▸ Preferís pegar los datos en formato CSV en lugar de Excel
+        </button>
+        <div id="csv-section" style="display:none;margin-top:14px">
+          <p class="hint" style="margin-bottom:12px">Pegá cada matriz en el campo correspondiente. Primera fila y primera columna son encabezados. Separador: coma.</p>
+          <div class="grid3" style="margin-bottom:12px">
+            <div class="card">
+              <div class="card-title"><span style="background:var(--teal-light);color:var(--teal-dark);padding:2px 8px;border-radius:4px;font-size:11px">R</span> Ambiente</div>
+              <div class="hint">Sitios × Variables ambientales</div>
+              <textarea id="matR" rows="7" placeholder="Sitio,Temp,pH,Humedad&#10;S1,25,6.5,40&#10;S2,22,6.8,50"></textarea>
+            </div>
+            <div class="card">
+              <div class="card-title"><span style="background:var(--blue-light);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:11px">L</span> Comunidad</div>
+              <div class="hint">Sitios × Especies</div>
+              <textarea id="matL" rows="7" placeholder="Sitio,Sp1,Sp2,Sp3&#10;S1,5,2,0&#10;S2,3,4,1"></textarea>
+            </div>
+            <div class="card">
+              <div class="card-title"><span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:11px">Q</span> Rasgos</div>
+              <div class="hint">Especies × Rasgos</div>
+              <textarea id="matQ" rows="7" placeholder="Especie,Talla,SLA&#10;Sp1,8,12&#10;Sp2,15,22"></textarea>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="cargarDatos()">Cargar datos CSV →</button>
+        </div>
+      </div>
+
       <div id="preview-data" style="margin-top:18px"></div>
     </div>
 
@@ -466,9 +500,102 @@ function goPage(p) {
   document.getElementById('nav-' + p).classList.add('active');
 }
 
+// ─── EXCEL LOADING ─────────────────────────────────────────────────────────
+function toggleCSV() {
+  const sec = document.getElementById('csv-section');
+  const btn = event.target;
+  if (sec.style.display === 'none') {
+    sec.style.display = 'block';
+    btn.textContent = '▾ Preferís pegar los datos en formato CSV en lugar de Excel';
+  } else {
+    sec.style.display = 'none';
+    btn.textContent = '▸ Preferís pegar los datos en formato CSV en lugar de Excel';
+  }
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('upload-zone').style.borderColor = 'var(--border2)';
+  const file = event.dataTransfer.files[0];
+  if (file) cargarExcel(file);
+}
+
+function cargarExcel(file) {
+  if (!file) return;
+  const zone = document.getElementById('upload-zone');
+  zone.innerHTML = `<div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:14px;color:var(--text2)">Leyendo <strong>${file.name}</strong>...</div>`;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+
+      // Check required sheets
+      const required = ['R','L','Q'];
+      const missing = required.filter(n => !wb.SheetNames.includes(n));
+      if (missing.length > 0) {
+        zone.innerHTML = `<div style="font-size:28px;margin-bottom:8px">❌</div>
+          <div style="font-size:14px;color:#b71c1c;font-weight:600">Faltan hojas: <strong>${missing.join(', ')}</strong></div>
+          <div style="font-size:12px;color:var(--text3);margin-top:6px">El archivo debe tener hojas llamadas exactamente R, L y Q.</div>
+          <div style="margin-top:12px"><button class="btn btn-sm" onclick="resetUploadZone()">Intentar de nuevo</button></div>`;
+        return;
+      }
+
+      // Parse each sheet — use tab separator to handle values that contain commas
+      required.forEach(name => {
+        const ws = wb.Sheets[name];
+        const csv = XLSX.utils.sheet_to_csv(ws, { FS: '\t' });
+        const ta = document.getElementById('mat' + name);
+        if (ta) ta.value = csv;
+      });
+
+      // Auto-load
+      cargarDatos();
+
+      // Update zone to success
+      zone.innerHTML = `<div style="font-size:28px;margin-bottom:8px">✅</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${file.name}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Tres hojas cargadas correctamente</div>
+        <div style="margin-top:10px"><button class="btn btn-sm" onclick="resetUploadZone()">Cargar otro archivo</button></div>`;
+
+    } catch(err) {
+      zone.innerHTML = `<div style="font-size:28px;margin-bottom:8px">❌</div>
+        <div style="font-size:14px;color:#b71c1c;font-weight:600">Error al leer el archivo</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">${err.message}</div>
+        <div style="margin-top:12px"><button class="btn btn-sm" onclick="resetUploadZone()">Intentar de nuevo</button></div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function resetUploadZone() {
+  const zone = document.getElementById('upload-zone');
+  zone.innerHTML = `<div style="font-size:36px;margin-bottom:10px">📂</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Hacé clic aquí o arrastrá tu archivo Excel</div>
+    <div style="font-size:12.5px;color:var(--text3)">Formato .xlsx · Tres hojas: <strong>R</strong> (ambiente), <strong>L</strong> (comunidad), <strong>Q</strong> (rasgos)</div>
+    <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="cargarExcel(this.files[0])">`;
+  zone.onclick = () => document.getElementById('xlsxInput').click();
+}
+
 // ─── DATA LOADING ──────────────────────────────────────────────────────────
 function parseCSV(txt) {
-  return txt.trim().split('\n').map(l => l.split(',').map(s => s.trim()));
+  const lines = txt.trim().split('\n').filter(l => l.trim() !== '');
+  // Detect separator: tab, semicolon, or comma — whichever gives more columns
+  const firstLine = lines[0];
+  const nTab  = firstLine.split('\t').length;
+  const nSemi = firstLine.split(';').length;
+  const nComma= firstLine.split(',').length;
+  const sep = nTab >= nSemi && nTab >= nComma ? '\t'
+            : nSemi >= nComma ? ';' : ',';
+  return lines
+    .map(l => l.split(sep).map(s => {
+      s = s.trim().replace(/^"|"$/g, '');
+      s = s.replace(/^(-?\d+),(\d+)$/, '$1.$2');
+      return s;
+    }))
+    // Remove rows where ALL cells are empty (trailing blank rows from Excel)
+    .filter(row => row.some(cell => cell !== ''));
 }
 
 function cargarEjemplo() {
@@ -504,22 +631,26 @@ function cargarDatos() {
     const lRaw = parseCSV(document.getElementById('matL').value);
     const qRaw = parseCSV(document.getElementById('matQ').value);
 
-    const siteNamesR = rRaw.slice(1).map(r => r[0]);
-    const siteNamesL = lRaw.slice(1).map(r => r[0]);
-    const speciesNamesL = lRaw[0].slice(1);
-    const speciesNamesQ = qRaw.slice(1).map(r => r[0]);
-    const envNames = rRaw[0].slice(1);
-    const traitNames = qRaw[0].slice(1);
+    if (rRaw.length < 2) throw new Error('La hoja R está vacía o no tiene datos');
+    if (lRaw.length < 2) throw new Error('La hoja L está vacía o no tiene datos');
+    if (qRaw.length < 2) throw new Error('La hoja Q está vacía o no tiene datos');
+
+    const siteNamesR = rRaw.slice(1).filter(r => r[0] !== '').map(r => r[0]);
+    const siteNamesL = lRaw.slice(1).filter(r => r[0] !== '').map(r => r[0]);
+    const speciesNamesL = lRaw[0].slice(1).filter(n => n !== '');
+    const speciesNamesQ = qRaw.slice(1).filter(r => r[0] !== '').map(r => r[0]);
+    const envNames = rRaw[0].slice(1).filter(n => n !== '');
+    const traitNames = qRaw[0].slice(1).filter(n => n !== '');
 
     const nSites = siteNamesR.length;
     const nSp = speciesNamesL.length;
 
-    if (siteNamesL.length !== nSites) throw new Error(`L tiene ${siteNamesL.length} sitios pero R tiene ${nSites}`);
-    if (speciesNamesQ.length !== nSp) throw new Error(`Q tiene ${speciesNamesQ.length} especies pero L tiene ${nSp}`);
+    if (siteNamesL.length !== nSites) throw new Error(`L tiene ${siteNamesL.length} sitios pero R tiene ${nSites}. Verificá que ambas hojas tengan los mismos sitios.`);
+    if (speciesNamesQ.length !== nSp) throw new Error(`Q tiene ${speciesNamesQ.length} especies pero L tiene ${nSp}. Verificá que ambas hojas tengan las mismas especies.`);
 
-    const R = rRaw.slice(1).map(r => r.slice(1).map(Number));
-    const L = lRaw.slice(1).map(r => r.slice(1).map(Number));
-    const Q = qRaw.slice(1).map(r => r.slice(1).map(Number));
+    const R = rRaw.slice(1).filter(r => r[0] !== '').map(r => r.slice(1, envNames.length+1).map(v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; }));
+    const L = lRaw.slice(1).filter(r => r[0] !== '').map(r => r.slice(1, speciesNamesL.length+1).map(v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; }));
+    const Q = qRaw.slice(1).filter(r => r[0] !== '').map(r => r.slice(1, traitNames.length+1).map(v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; }));
 
     STATE.mats = { R, L, Q, siteNames: siteNamesR, speciesNames: speciesNamesL, envNames, traitNames };
 
@@ -539,7 +670,10 @@ function cargarDatos() {
     document.getElementById('nav-datos').classList.add('done');
   } catch(e) {
     ['statR','statL','statQ'].forEach(id => { const el = document.getElementById(id); el.className = 'tag tag-err'; el.textContent = 'Error'; });
-    alert('Error al cargar datos: ' + e.message);
+    document.getElementById('preview-data').innerHTML = `
+      <div style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:12px 16px;font-size:13px;color:#b71c1c;margin-top:8px">
+        <strong>Error al cargar los datos:</strong> ${e.message}
+      </div>`;
   }
 }
 
@@ -810,7 +944,8 @@ function renderTabla() {
     // diverging bar: center line at 50%, positive grows right, negative grows left
     const halfW = 70; // half the total bar area (px)
     const bW = Math.round(Math.abs(r)/maxR * halfW);
-    const barColor = !sig ? '#c5cdd8' : (r>0 ? '#1D9E75' : '#D85A30');
+    // heatmap palette: positive = teal (#52c4a0), negative = amber (#f5c842), ns = gray
+    const barColor = !sig ? '#c5cdd8' : (r>0 ? '#52c4a0' : '#f5c842');
     const barHtml = r >= 0
       ? `<div style="display:flex;align-items:center;width:${halfW*2}px">
            <div style="width:${halfW}px;display:flex;justify-content:flex-end"></div>
@@ -945,14 +1080,14 @@ function renderHeatmap() {
 
   // ── Legend ──
   const ly = labelH + nT*cellH + 18;
-  svg += `<text x="${labelW}" y="${ly+4}" font-size="10.5" fill="#3d5070">← negativo (#FFDF82)</text>`;
+  svg += `<text x="${labelW}" y="${ly+4}" font-size="10.5" fill="#3d5070">← negativo</text>`;
   const steps = [-1, -0.5, 0, 0.5, 1];
-  const lx0 = labelW + 120;
+  const lx0 = labelW + 80;
   steps.forEach((s, i) => {
     const c = rToColor(s);
     svg += `<rect x="${lx0 + i*22}" y="${ly-8}" width="20" height="14" rx="3" fill="${c}" stroke="#c5cdd8" stroke-width="0.5"/>`;
   });
-  svg += `<text x="${lx0 + 5*22 + 6}" y="${ly+4}" font-size="10.5" fill="#3d5070">positivo (#D9FFF4) →</text>`;
+  svg += `<text x="${lx0 + 5*22 + 6}" y="${ly+4}" font-size="10.5" fill="#3d5070">positivo →</text>`;
   svg += `<text x="${lx0 + 2*22 + 10}" y="${ly+18}" text-anchor="middle" font-size="9.5" fill="#8a96a8">borde azul = p ≤ ${alpha}</text>`;
 
   svg += `</svg>`;
