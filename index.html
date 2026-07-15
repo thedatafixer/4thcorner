@@ -1174,7 +1174,7 @@ function renderOrdinacion() {
     <div class="subtabs">
       <button class="subtab active" onclick="showSubtab(this,'ord-sites')">Sitios (R)</button>
       <button class="subtab" onclick="showSubtab(this,'ord-species')">Reciprocal Averaging</button>
-      <button class="subtab" onclick="showSubtab(this,'ord-biplot')">Triplót combinado</button>
+      <button class="subtab" onclick="showSubtab(this,'ord-biplot')">Biplot combinado</button>
     </div>
     <div id="ord-sites" class="subcontent active">
       <div class="card"><canvas id="c-sites" height="380"></canvas></div>
@@ -1188,7 +1188,7 @@ function renderOrdinacion() {
     </div>
     <div id="ord-biplot" class="subcontent">
       <div class="card"><canvas id="c-biplot" height="420"></canvas></div>
-      <p style="font-size:12px;color:var(--text2);margin-top:8px">Triplót: sitios, especies (posición ponderada) y variables ambientales superpuestos en el espacio del PCA ambiental.</p>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">Biplot combinado: sitios, especies (posición ponderada) y variables ambientales superpuestos en el espacio del PCA ambiental.</p>
       <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-biplot','Biplot_combinado')">↓ Descargar SVG</button></div>
     </div>`;
 
@@ -1290,7 +1290,7 @@ function drawOrdWeighted(id, scores, labels, title, dotColor) {
 <line x1="${cx}" y1="${t}" x2="${cx}" y2="${t+ph}" stroke="#ddd" stroke-width="0.8"/>`;
   for (let i=0;i<scores.length;i++) {
     const px=cx+scores[i][0]*sc, py=cy-scores[i][1]*sc;
-    // Triangle — same symbol as Biplot
+    // Triangle — same symbol as triplot
     svg += `<polygon points="${px},${py-7} ${px+6},${py+5} ${px-6},${py+5}" fill="${dotColor}"/>
 <text x="${px+9}" y="${py}" dominant-baseline="middle" font-size="10.5" font-style="italic" fill="${dotColor}">${labels[i]}</text>`;
   }
@@ -1301,7 +1301,7 @@ function drawOrdWeighted(id, scores, labels, title, dotColor) {
 function drawBiplot(id, sSite, siteNames, sSpW, speciesNames, loadings, envNames) {
   const {w,h} = makeCanvas(id);
   const l=55,r=40,t=36,b=48, pw=w-l-r, ph=h-t-b, cx=l+pw/2, cy=t+ph/2, sc=Math.min(pw,ph)*0.38, ly=h-20;
-  let svg = svgOpen(w,h,'Triplót — Sitios + Especies + Variables ambientales');
+  let svg = svgOpen(w,h,'Biplot combinado — Sitios + Especies + Variables ambientales');
   svg += `<line x1="${l}" y1="${cy}" x2="${l+pw}" y2="${cy}" stroke="#ddd" stroke-width="0.8"/>
 <line x1="${cx}" y1="${t}" x2="${cx}" y2="${t+ph}" stroke="#ddd" stroke-width="0.8"/>`;
   for (let j=0;j<envNames.length;j++) {
