@@ -1173,9 +1173,8 @@ function renderOrdinacion() {
   document.getElementById('ord-content').innerHTML = `
     <div class="subtabs">
       <button class="subtab active" onclick="showSubtab(this,'ord-sites')">Sitios (R)</button>
-      <button class="subtab" onclick="showSubtab(this,'ord-species')">Especies en espacio ambiental</button>
-      <button class="subtab" onclick="showSubtab(this,'ord-traits')">Rasgos (Q)</button>
-      <button class="subtab" onclick="showSubtab(this,'ord-biplot')">Biplót combinado</button>
+      <button class="subtab" onclick="showSubtab(this,'ord-species')">Reciprocal Averaging</button>
+      <button class="subtab" onclick="showSubtab(this,'ord-biplot')">Triplót combinado</button>
     </div>
     <div id="ord-sites" class="subcontent active">
       <div class="card"><canvas id="c-sites" height="380"></canvas></div>
@@ -1184,24 +1183,18 @@ function renderOrdinacion() {
     </div>
     <div id="ord-species" class="subcontent">
       <div class="card"><canvas id="c-sp" height="380"></canvas></div>
-      <p style="font-size:12px;color:var(--text2);margin-top:8px">Posición promedio ponderada de cada especie en el espacio ambiental, usando la abundancia en L como peso.</p>
-      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-sp','Especies_espacio_ambiental')">↓ Descargar SVG</button></div>
-    </div>
-    <div id="ord-traits" class="subcontent">
-      <div class="card"><canvas id="c-traits" height="380"></canvas></div>
-      <p style="font-size:12px;color:var(--text2);margin-top:8px">PCA de rasgos funcionales. Cada punto es una especie. Las flechas indican los rasgos con mayor varianza.</p>
-      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-traits','PCA_rasgos')">↓ Descargar SVG</button></div>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">Posición de cada especie calculada como la media ponderada de las coordenadas de los sitios donde aparece, usando la cobertura en L como peso (Reciprocal Averaging).</p>
+      <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-sp','Reciprocal_averaging')">↓ Descargar SVG</button></div>
     </div>
     <div id="ord-biplot" class="subcontent">
       <div class="card"><canvas id="c-biplot" height="420"></canvas></div>
-      <p style="font-size:12px;color:var(--text2);margin-top:8px">Biplót de sitios y variables ambientales superpuesto con las especies (promedio ponderado). Permite ver qué sitios y qué variables se relacionan con cada especie.</p>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">Triplót: sitios, especies (posición ponderada) y variables ambientales superpuestos en el espacio del PCA ambiental.</p>
       <div class="btn-row" style="margin-top:8px"><button class="btn btn-sm" onclick="downloadCanvasAsSVG('c-biplot','Biplot_combinado')">↓ Descargar SVG</button></div>
     </div>`;
 
   setTimeout(() => {
     drawOrdination('c-sites', sSite, siteNames, ordSites.loadings, envNames, 'Sitios — PCA ambiental', '#185FA5', '#1D9E75');
-    drawOrdWeighted('c-sp', sSpW, speciesNames, 'Especies — posición ponderada en espacio ambiental', '#D85A30');
-    drawOrdination('c-traits', sSp, speciesNames, ordSp.loadings, traitNames, 'Especies — PCA de rasgos', '#534AB7', '#BA7517');
+    drawOrdWeighted('c-sp', sSpW, speciesNames, 'Especies — Reciprocal Averaging', '#D85A30');
     drawBiplot('c-biplot', sSite, siteNames, sSpW, speciesNames, ordSites.loadings, envNames);
   }, 50);
 }
@@ -1297,9 +1290,9 @@ function drawOrdWeighted(id, scores, labels, title, dotColor) {
 <line x1="${cx}" y1="${t}" x2="${cx}" y2="${t+ph}" stroke="#ddd" stroke-width="0.8"/>`;
   for (let i=0;i<scores.length;i++) {
     const px=cx+scores[i][0]*sc, py=cy-scores[i][1]*sc;
-    svg += `<circle cx="${px}" cy="${py}" r="7" fill="${dotColor}"/>
-<text x="${px}" y="${py}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="bold" fill="white">${i+1}</text>
-<text x="${px}" y="${py-11}" text-anchor="middle" font-size="11" fill="#1a1a18">${labels[i]}</text>`;
+    // Triangle — same symbol as Biplot
+    svg += `<polygon points="${px},${py-7} ${px+6},${py+5} ${px-6},${py+5}" fill="${dotColor}"/>
+<text x="${px+9}" y="${py}" dominant-baseline="middle" font-size="10.5" font-style="italic" fill="${dotColor}">${labels[i]}</text>`;
   }
   svg += '</svg>';
   injectSVG(id, svg);
@@ -1308,7 +1301,7 @@ function drawOrdWeighted(id, scores, labels, title, dotColor) {
 function drawBiplot(id, sSite, siteNames, sSpW, speciesNames, loadings, envNames) {
   const {w,h} = makeCanvas(id);
   const l=55,r=40,t=36,b=48, pw=w-l-r, ph=h-t-b, cx=l+pw/2, cy=t+ph/2, sc=Math.min(pw,ph)*0.38, ly=h-20;
-  let svg = svgOpen(w,h,'Biplót — Sitios + Especies + Variables ambientales');
+  let svg = svgOpen(w,h,'Triplót — Sitios + Especies + Variables ambientales');
   svg += `<line x1="${l}" y1="${cy}" x2="${l+pw}" y2="${cy}" stroke="#ddd" stroke-width="0.8"/>
 <line x1="${cx}" y1="${t}" x2="${cx}" y2="${t+ph}" stroke="#ddd" stroke-width="0.8"/>`;
   for (let j=0;j<envNames.length;j++) {
